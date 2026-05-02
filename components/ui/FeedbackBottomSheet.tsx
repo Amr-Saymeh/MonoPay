@@ -114,6 +114,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 12,
     backgroundColor: "#7C3AED",
+    marginBottom:64,
   },
   primaryBtnText: {
     fontSize: 14,

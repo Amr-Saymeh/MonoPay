@@ -44,7 +44,6 @@ import {
   Platform,
   Pressable,
   StyleSheet,
-  TextInput,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -70,6 +69,17 @@ type IncomeSourceFormValues = {
   notes: string;
 };
 
+type SourceTypeFilter = SourceType | "all";
+
+const SOURCE_TYPE_FILTERS: SourceTypeFilter[] = [
+  "all",
+  "salary",
+  "loan",
+  "freelance",
+  "investment",
+  "other",
+];
+
 export default function IncomeSavingsScreen() {
   const { t } = useI18n();
   const router = useRouter();
@@ -87,10 +97,12 @@ export default function IncomeSavingsScreen() {
   const [successTitle, setSuccessTitle] = useState("");
   const [successDescription, setSuccessDescription] = useState("");
   const [successIcon, setSuccessIcon] = useState<keyof typeof MaterialIcons.glyphMap>("check-circle");
+  const [pendingSuccessSheet, setPendingSuccessSheet] = useState(false);
   const [errorTitle, setErrorTitle] = useState("");
   const [errorDescription, setErrorDescription] = useState("");
   const [errorVisible, setErrorVisible] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedSourceTypeFilter, setSelectedSourceTypeFilter] =
+    useState<SourceTypeFilter>("all");
   const deleteSheetRef = useRef<BottomSheetModal>(null);
   const successSheetRef = useRef<BottomSheetModal>(null);
   const deleteSheetSnapPoints = useMemo(() => ["34%"], []);
@@ -228,16 +240,10 @@ export default function IncomeSavingsScreen() {
     );
   }, [sources]);
 
-  const searchEnabled = sources.length > 3;
-  const normalizedSearch = searchEnabled ? searchQuery.trim().toLowerCase() : "";
   const visibleSources = useMemo(() => {
-    if (!normalizedSearch) return sources;
-    return sources.filter((source) =>
-      `${source.type} ${source.walletName} ${source.notes || ""}`
-        .toLowerCase()
-        .includes(normalizedSearch),
-    );
-  }, [sources, normalizedSearch]);
+    if (selectedSourceTypeFilter === "all") return sources;
+    return sources.filter((source) => source.type === selectedSourceTypeFilter);
+  }, [selectedSourceTypeFilter, sources]);
 
   const resetForm = (walletSlot: string | null) => {
     const firstCurrency = walletSlot ? walletCurrenciesBySlot[walletSlot]?.[0] : undefined;
@@ -307,7 +313,7 @@ export default function IncomeSavingsScreen() {
       setSuccessTitle(t("incomeSavings.addedTitle"));
       setSuccessDescription(t("incomeSavings.addedDescription"));
       setSuccessIcon("add-circle");
-      setTimeout(() => successSheetRef.current?.present(), 220);
+      setPendingSuccessSheet(true);
     } catch (error) {
       hapticError();
       setErrorTitle(t("error"));
@@ -317,6 +323,17 @@ export default function IncomeSavingsScreen() {
       setSaving(false);
     }
   });
+
+  useEffect(() => {
+    if (sourceModalVisible || pendingDeleteSource || !pendingSuccessSheet) return;
+
+    const timer = setTimeout(() => {
+      successSheetRef.current?.present();
+      setPendingSuccessSheet(false);
+    }, 120);
+
+    return () => clearTimeout(timer);
+  }, [pendingDeleteSource, pendingSuccessSheet, sourceModalVisible]);
 
   const handleDeleteSource = (item: IncomeSource) => {
     hapticWarning();
@@ -336,6 +353,10 @@ export default function IncomeSavingsScreen() {
       await deleteIncomeSource(user.uid, pendingDeleteSource.id);
       deleteSheetRef.current?.dismiss();
       hapticSuccess();
+      setSuccessTitle(t("incomeSavings.deleteSuccess"));
+      setSuccessDescription(t("incomeSavings.deletedDescription"));
+      setSuccessIcon("delete-forever");
+      setPendingSuccessSheet(true);
     } catch (error) {
       hapticError();
       setErrorTitle(t("error"));
@@ -406,21 +427,14 @@ export default function IncomeSavingsScreen() {
   const sheetBorder = isDark ? "rgba(196,181,253,0.3)" : "rgba(124,58,237,0.2)";
   const searchBg = isDark ? "rgba(124,58,237,0.10)" : "#FFFFFF";
   const searchBorder = isDark ? "rgba(196,181,253,0.25)" : "rgba(124,58,237,0.18)";
-  const searchText = isDark ? "#F5F3FF" : "#1F2937";
-  const searchPlaceholder = isDark ? "rgba(255,255,255,0.45)" : "#6B7280";
+  const filterText = isDark ? "#EDE9FE" : "#4C1D95";
   const floatingButtonBottom =
     Platform.OS === "ios"
       ? Math.max(insets.bottom + 100, 86)
       : Math.max(insets.bottom + 88, 76);
   const scrollBottomSpacing = floatingButtonBottom + 86;
-  const bottomSheetInset =
-    Platform.OS === "ios"
-      ? Math.max(insets.bottom + 24, 34)
-      : Math.max(insets.bottom + 16, 24);
-  const successBottomSheetInset =
-    Platform.OS === "ios"
-      ? Math.max(insets.bottom, 12)
-      : Math.max(insets.bottom, 12);
+  const bottomSheetInset = 0
+  const successBottomSheetInset = 0
 
   const sourceTypes: SourceType[] = ["salary", "loan", "freelance", "investment", "other"];
   const regularityTypes: Regularity[] = ["daily", "weekly", "monthly", "yearly"];
@@ -499,28 +513,50 @@ export default function IncomeSavingsScreen() {
                 sourceCount={sources.length}
                 estimatedMonthlyTotal={estimatedMonthlyTotal}
               />
-              {searchEnabled ? (
-                <View style={[styles.searchWrap, { backgroundColor: searchBg, borderColor: searchBorder }]}>
-                  <MaterialIcons name="search" size={18} color={isDark ? "#C4B5FD" : "#7C3AED"} />
-                  <TextInput
-                    value={searchQuery}
-                    onChangeText={setSearchQuery}
-                    style={[styles.searchInput, { color: searchText }]}
-                    placeholder={t("incomeSavings.searchPlaceholder")}
-                    placeholderTextColor={searchPlaceholder}
-                    onFocus={hapticSelection}
+              {sources.length > 0 ? (
+                <View style={[styles.filterWrap, { backgroundColor: searchBg, borderColor: searchBorder }]}>
+                  <View style={styles.filterHeader}>
+                    <MaterialIcons name="category" size={18} color={isDark ? "#C4B5FD" : "#7C3AED"} />
+                    <ThemedText style={[styles.filterTitle, { color: filterText }]}>
+                      {t("incomeSavings.source")}
+                    </ThemedText>
+                  </View>
+                  <FlatList
+                    data={SOURCE_TYPE_FILTERS}
+                    horizontal
+                    keyExtractor={(item) => item}
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.filterChipsRow}
+                    renderItem={({ item }) => {
+                      const isActive = selectedSourceTypeFilter === item;
+                      const label = item === "all" ? t("common.all") : getSourceTypeLabel(item);
+
+                      return (
+                        <Pressable
+                          style={[
+                            styles.filterChip,
+                            isActive && styles.filterChipActive,
+                          ]}
+                          onPress={() => {
+                            hapticSelection();
+                            setSelectedSourceTypeFilter(item);
+                          }}
+                        >
+                          <ThemedText
+                            style={[
+                              styles.filterChipText,
+                              isActive && styles.filterChipTextActive,
+                            ]}
+                            numberOfLines={1}
+                            adjustsFontSizeToFit
+                            minimumFontScale={0.82}
+                          >
+                            {label}
+                          </ThemedText>
+                        </Pressable>
+                      );
+                    }}
                   />
-                  {searchQuery.length > 0 ? (
-                    <Pressable
-                      onPress={() => {
-                        hapticTap();
-                        setSearchQuery("");
-                      }}
-                      style={styles.searchClearBtn}
-                    >
-                      <MaterialIcons name="close" size={16} color={isDark ? "#E5E7EB" : "#6B7280"} />
-                    </Pressable>
-                  ) : null}
                 </View>
               ) : null}
             </View>
@@ -705,28 +741,49 @@ const styles = StyleSheet.create({
   listHeaderWrap: {
     gap: 12,
   },
-  searchWrap: {
+  filterWrap: {
     borderWidth: 1,
     borderRadius: 12,
     paddingHorizontal: 12,
-    height: 46,
+    paddingVertical: 12,
+    gap: 10,
+  },
+  filterHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
   },
-  searchInput: {
-    flex: 1,
+  filterTitle: {
     fontSize: 14,
-    fontWeight: "500",
-    paddingVertical: 0,
+    fontWeight: "700",
   },
-  searchClearBtn: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+  filterChipsRow: {
+    gap: 8,
+    paddingRight: 8,
+  },
+  filterChip: {
+    borderWidth: 1,
+    borderColor: "rgba(124,58,237,0.25)",
+    borderRadius: 999,
+    minWidth: 82,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(124,58,237,0.12)",
+    backgroundColor: "rgba(124,58,237,0.08)",
+  },
+  filterChipActive: {
+    backgroundColor: "#7C3AED",
+    borderColor: "#7C3AED",
+  },
+  filterChipText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#7C3AED",
+    textAlign: "center",
+  },
+  filterChipTextActive: {
+    color: "#FFFFFF",
   },
 
   emptyState: {
@@ -778,6 +835,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10,
     marginTop: 6,
+    marginBottom: 64,
   },
   sheetButton: {
     flex: 1,
@@ -807,5 +865,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
+  },
+  pressablePressed: {
+    opacity: 0.78,
+    transform: [{ scale: 0.97 }],
   },
 });
