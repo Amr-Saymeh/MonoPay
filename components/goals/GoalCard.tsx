@@ -9,7 +9,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { hapticSelection, hapticTap, hapticWarning } from '@/src/utils/haptics';
 
-interface GoalCardProps {
+type GoalCardProps = {
   id: string;
   title: string;
   currentAmount: number;
@@ -25,7 +25,7 @@ interface GoalCardProps {
   onContribute: () => void;
   onEdit: () => void;
   onDelete: () => void;
-}
+};
 
 export const GoalCard = ({
   id,

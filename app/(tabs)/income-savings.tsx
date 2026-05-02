@@ -192,14 +192,14 @@ export default function IncomeSavingsScreen() {
     return walletCurrenciesBySlot[selectedWalletSlot] ?? [];
   }, [selectedWalletSlot, walletCurrenciesBySlot]);
 
-  const interpolate = React.useCallback((template: string, values: Record<string, string>) => {
+  const interpolate = useCallback((template: string, values: Record<string, string>) => {
     return Object.entries(values).reduce(
       (result, [key, value]) => result.replaceAll(`{{${key}}}`, value),
       template,
     );
   }, []);
 
-  const getSourceTypeLabel = React.useCallback((sourceType: SourceType) => {
+  const getSourceTypeLabel = useCallback((sourceType: SourceType) => {
     switch (sourceType) {
       case "salary":
         return t("incomeSavings.categories.salary");
@@ -214,7 +214,7 @@ export default function IncomeSavingsScreen() {
     }
   }, [t]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (selectedWalletCurrencies.length === 0) return;
     if (!selectedWalletCurrencies.includes(normalizeCurrencyCode(currency))) {
       setValue("currency", selectedWalletCurrencies[0]);
@@ -307,7 +307,7 @@ export default function IncomeSavingsScreen() {
       setSuccessTitle(t("incomeSavings.addedTitle"));
       setSuccessDescription(t("incomeSavings.addedDescription"));
       setSuccessIcon("add-circle");
-      requestAnimationFrame(() => successSheetRef.current?.present());
+      setTimeout(() => successSheetRef.current?.present(), 220);
     } catch (error) {
       hapticError();
       setErrorTitle(t("error"));
@@ -344,7 +344,7 @@ export default function IncomeSavingsScreen() {
     }
   };
 
-  const handleBack = React.useCallback(() => {
+  const handleBack = useCallback(() => {
     if (isLeavingRef.current) return;
     isLeavingRef.current = true;
     hapticTap();
@@ -415,8 +415,12 @@ export default function IncomeSavingsScreen() {
   const scrollBottomSpacing = floatingButtonBottom + 86;
   const bottomSheetInset =
     Platform.OS === "ios"
-      ? Math.max(insets.bottom + 74, 88)
-      : Math.max(insets.bottom + 64, 76);
+      ? Math.max(insets.bottom + 24, 34)
+      : Math.max(insets.bottom + 16, 24);
+  const successBottomSheetInset =
+    Platform.OS === "ios"
+      ? Math.max(insets.bottom, 12)
+      : Math.max(insets.bottom, 12);
 
   const sourceTypes: SourceType[] = ["salary", "loan", "freelance", "investment", "other"];
   const regularityTypes: Regularity[] = ["daily", "weekly", "monthly", "yearly"];
@@ -642,7 +646,7 @@ export default function IncomeSavingsScreen() {
         actionLabel={t("common.confirm")}
         titleIcon={successIcon}
         actionIcon="check-circle"
-        bottomInset={bottomSheetInset}
+        bottomInset={successBottomSheetInset}
         onAction={() => successSheetRef.current?.dismiss()}
       />
 

@@ -56,11 +56,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 type SortKey = "date" | "progress" | "targetAmount" | "amountSaved";
 type SortDir = "asc" | "desc";
 
-interface SortOption {
+type SortOption = {
   key: SortKey;
   icon: keyof typeof MaterialIcons.glyphMap;
   defaultDir: SortDir;
-}
+};
 
 const SORT_OPTIONS: SortOption[] = [
   {
@@ -270,9 +270,9 @@ export default function GoalsScreen() {
       setSuccessTitle(t("goals.contributionAddedTitle"));
       setSuccessDescription(t("goals.contributionSuccess"));
       setSuccessIcon("add-circle");
-      requestAnimationFrame(() => successSheetRef.current?.present());
       setShowContributionModal(false);
       setSelectedGoal(null);
+      setTimeout(() => successSheetRef.current?.present(), 240);
     } catch (error) {
       hapticError();
       Alert.alert(t("error"), String(error));
@@ -369,8 +369,12 @@ export default function GoalsScreen() {
   const scrollBottomSpacing = floatingButtonBottom + 86;
   const bottomSheetInset =
     Platform.OS === "ios"
-      ? Math.max(insets.bottom + 74, 88)
-      : Math.max(insets.bottom + 64, 76);
+      ? Math.max(insets.bottom + 24, 34)
+      : Math.max(insets.bottom + 16, 24);
+  const successBottomSheetInset =
+    Platform.OS === "ios"
+      ? Math.max(insets.bottom, 12)
+      : Math.max(insets.bottom, 12);
 
   return (
     <BottomSheetModalProvider>
@@ -846,7 +850,7 @@ export default function GoalsScreen() {
         actionLabel={t("common.confirm")}
         titleIcon={successIcon}
         actionIcon="check-circle"
-        bottomInset={bottomSheetInset}
+        bottomInset={successBottomSheetInset}
         onAction={() => successSheetRef.current?.dismiss()}
       />
     </BottomSheetModalProvider>
