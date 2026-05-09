@@ -12,7 +12,7 @@ export type SortMode = "recent" | "largest";
 
 export type Entry = {
   id: string;
-  source: "transaction" | "purchase";
+  source: "transaction" | "purchase" | "income";
   amount: number;
   currency: string;
   type: "send" | "receive";
@@ -56,7 +56,7 @@ export const WINDOWS: TimeWindow[] = ["7D", "30D", "90D", "1Y", "ALL"];
 
 export const WEEKDAYS: Record<SupportedLanguage, string[]> = {
   en: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-  ar: ["ح", "ن", "ث", "ر", "خ", "ج", "س"],
+  ar: ["أحد", "إثن", "ثلا", "أرب", "خمي", "جمع", "سبت"],
 };
 
 const CURRENCY_SYMBOLS: Record<string, string> = {
@@ -136,6 +136,24 @@ const CATEGORY_META: Record<
     ar: "الراتب",
     color: "#22C55E",
     icon: "cash-outline",
+  },
+  freelance: {
+    en: "Freelance",
+    ar: "عمل حر",
+    color: "#10B981",
+    icon: "briefcase-outline",
+  },
+  loan: {
+    en: "Loan",
+    ar: "قرض",
+    color: "#F97316",
+    icon: "card-outline",
+  },
+  investment: {
+    en: "Investment",
+    ar: "استثمار",
+    color: "#0EA5E9",
+    icon: "trending-up-outline",
   },
   savings: {
     en: "Savings",

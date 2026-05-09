@@ -25,7 +25,7 @@ import { useAuth } from "@/src/providers/AuthProvider";
 export default function SelfieScreen() {
   const { t, isRtl } = useI18n();
   const router = useRouter();
-  const { register, registering } = useAuth();
+  const { register, registering, signOut } = useAuth();
   const insets = useSafeAreaInsets();
 
   const surface = useThemeColor({}, "surface");
@@ -109,7 +109,12 @@ export default function SelfieScreen() {
       });
 
       clear();
-      router.replace("/(auth)/welcome" as any);
+
+      try {
+        await signOut();
+      } finally {
+        router.replace("/(auth)/login" as any);
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : t("uploadFailed");
       Alert.alert(t("error"), msg || t("uploadFailed"));
