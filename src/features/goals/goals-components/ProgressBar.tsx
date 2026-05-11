@@ -1,4 +1,3 @@
-// components/goals/ProgressBar.tsx
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
@@ -55,3 +54,4 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
 });
+
