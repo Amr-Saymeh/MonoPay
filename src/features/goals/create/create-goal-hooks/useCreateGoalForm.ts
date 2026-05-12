@@ -55,6 +55,7 @@ export function useCreateGoalForm(
   );
 
   const form = useForm<FormValues>({
+    mode: "all",
     defaultValues,
   });
 

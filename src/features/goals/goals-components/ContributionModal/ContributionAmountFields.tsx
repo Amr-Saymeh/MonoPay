@@ -34,31 +34,45 @@ export function ContributionAmountFields({
       <Controller
         control={control}
         name="amount"
-        render={({ field: { value, onChange } }) => (
-          <TextInput
-            style={[
-              styles.input,
-              {
-                backgroundColor: inputBg,
-                borderColor: inputBorder,
-                color: inputColor,
-              },
-            ]}
-            value={value}
-            onChangeText={onChange}
-            placeholder={`0.00 ${currencyLabel}`}
-            placeholderTextColor={placeholderColor}
-            keyboardType="numeric"
-            returnKeyType="next"
-          />
+        rules={{
+          required: true,
+          validate: (value) => {
+            const amount = Number(value);
+            return Number.isFinite(amount) && amount > 0;
+          },
+        }}
+        render={({ field: { value, onChange, onBlur }, fieldState: { invalid } }) => (
+          <>
+            <TextInput
+              style={[
+                styles.input,
+                {
+                  backgroundColor: inputBg,
+                  borderColor: invalid ? "#EF4444" : inputBorder,
+                  color: inputColor,
+                },
+              ]}
+              value={value}
+              onBlur={onBlur}
+              onChangeText={onChange}
+              placeholder={`0.00 ${currencyLabel}`}
+              placeholderTextColor={placeholderColor}
+              keyboardType="numeric"
+              returnKeyType="next"
+            />
+            {invalid && (
+              <ThemedText style={styles.fieldError}>
+                {t("goals.invalidContributionAmount")}
+              </ThemedText>
+            )}
+          </>
         )}
       />
 
       <ThemedText style={styles.label}>
         {t("goals.contributionReason")}
       </ThemedText>
-      <Controller
-        control={control}
+      <Controller        control={control}
         name="reason"
         render={({ field: { value, onChange } }) => (
           <TextInput
@@ -84,4 +98,3 @@ export function ContributionAmountFields({
     </>
   );
 }
-

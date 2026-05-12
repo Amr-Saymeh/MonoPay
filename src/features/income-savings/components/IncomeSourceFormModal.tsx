@@ -1,4 +1,4 @@
-import { AddEntryModal } from "@/components/income-savings/AddEntryModal";
+import { AddEntryModal } from "./AddEntryModal";
 
 import { REGULARITY_TYPES, SOURCE_TYPES } from "../constants";
 
