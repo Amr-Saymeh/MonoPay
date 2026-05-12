@@ -21,16 +21,10 @@ export function useSharedMembers({ enabled, currentUserId }: UseSharedMembersPar
 
     let cancelled = false;
 
-    (async () => {
-      try {
-        const snapshot = await get(ref(db, "users"));
-        if (cancelled) return;
-        setAllUsers((snapshot.val() ?? {}) as Record<string, UserProfile>);
-      } catch {
-        if (cancelled) return;
-        setAllUsers({});
-      }
-    })();
+    get(ref(db, "users")).then((snapshot) => {
+      if (cancelled) return;
+      setAllUsers((snapshot.val() ?? {}) as Record<string, UserProfile>);
+    });
 
     return () => {
       cancelled = true;

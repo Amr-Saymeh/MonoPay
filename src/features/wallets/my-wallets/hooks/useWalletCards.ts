@@ -12,7 +12,6 @@ type UseWalletCardsParams = {
 };
 
 export function useWalletCards({ userId }: UseWalletCardsParams) {
-  const [loading, setLoading] = useState(true);
   const [userWallets, setUserWallets] = useState<Record<string, UserWalletLink>>({});
   const [wallets, setWallets] = useState<Record<string, WalletRecord>>({});
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
@@ -22,21 +21,12 @@ export function useWalletCards({ userId }: UseWalletCardsParams) {
       setUserWallets({});
       setWallets({});
       setSelectedKey(null);
-      setLoading(false);
       return;
     }
 
-    const unsubscribe = onValue(
-      ref(db, `users/${userId}/userwallet`),
-      (snapshot) => {
-        setUserWallets((snapshot.val() ?? {}) as Record<string, UserWalletLink>);
-        setLoading(false);
-      },
-      () => {
-        setUserWallets({});
-        setLoading(false);
-      },
-    );
+    const unsubscribe = onValue(ref(db, `users/${userId}/userwallet`), (snapshot) => {
+      setUserWallets((snapshot.val() ?? {}) as Record<string, UserWalletLink>);
+    });
 
     return () => unsubscribe();
   }, [userId]);
@@ -139,7 +129,6 @@ export function useWalletCards({ userId }: UseWalletCardsParams) {
 
   return {
     cards,
-    loading,
     mainWallet,
     selected,
     selectedIndex,

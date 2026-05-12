@@ -1,17 +1,17 @@
-import React, { useMemo } from 'react';
-import { View, Text, ActivityIndicator } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useI18n } from "@/hooks/use-i18n";
-import { homeStyles as styles } from '../styles';
 import { useWalletCards } from '@/src/features/wallets/my-wallets/hooks/useWalletCards';
 import { useAuth } from '@/src/providers/AuthProvider';
 import { useThemeMode } from '@/src/providers/ThemeModeProvider';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import React, { useMemo } from 'react';
+import { Text, View } from 'react-native';
+import { homeStyles as styles } from '../styles';
 
 export default function TotalBalance() {
   const { t } = useI18n();
   const { user } = useAuth();
-  const { cards, loading } = useWalletCards({ userId: user?.uid });
+  const { cards } = useWalletCards({ userId: user?.uid });
   const { colorScheme } = useThemeMode();
   const isDark = colorScheme === 'dark';
 
@@ -33,14 +33,6 @@ export default function TotalBalance() {
     const primary = keys.includes("NIS") ? "NIS" : (keys.includes("USD") ? "USD" : keys[0]);
     return `${totals[primary].toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${primary}`;
   }, [totals]);
-
-  if (loading) {
-    return (
-      <View style={[styles.balanceContainer, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator color="#B166F8" />
-      </View>
-    );
-  }
 
   return (
     <View style={styles.balanceContainer}>
