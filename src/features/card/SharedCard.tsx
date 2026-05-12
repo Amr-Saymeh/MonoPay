@@ -77,7 +77,7 @@ export function SharedCard({
 
   return (
     <TouchableOpacity style={styles.container} onPress={handlePress} activeOpacity={0.92}>
-     
+
       <View style={styles.glowTopRight} />
       <View style={styles.glowBottomLeft} />
 
@@ -89,7 +89,7 @@ export function SharedCard({
           <Text style={styles.name} numberOfLines={1}>{name}</Text>
         </View>
 
-    
+
         {isShared && walletState && (
           <View style={[
             styles.statusBadge,
@@ -109,7 +109,7 @@ export function SharedCard({
         )}
       </View>
 
-    
+
       <Text style={styles.label}>Available Balance</Text>
 
       {nonZero.length === 0 ? (
@@ -138,7 +138,7 @@ export function SharedCard({
         </Animated.View>
       ) : null}
 
-      
+
       {nonZero.length > 1 && (
         <View style={styles.chips}>
           {nonZero.map((_, i) => (
@@ -150,7 +150,7 @@ export function SharedCard({
         </View>
       )}
 
-      
+
       {isShared && (
         <>
           <View style={styles.divider} />
