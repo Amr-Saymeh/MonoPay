@@ -6,10 +6,10 @@ import { StyleSheet, View } from "react-native";
 import { ThemedText } from "@/components/themed-text";
 import { useI18n } from "@/hooks/use-i18n";
 
-interface SummaryCardProps {
+type SummaryCardProps = {
   sourceCount: number;
   estimatedMonthlyTotal: number;
-}
+};
 
 export function SummaryCard({ sourceCount, estimatedMonthlyTotal }: SummaryCardProps) {
   const { t } = useI18n();
