@@ -1,4 +1,6 @@
-import { GoalCard } from "./GoalCard";
+import { useCallback } from "react";
+
+import { GoalCard, type GoalContribution } from "./GoalCard";
 import { ThemedText } from "@/components/themed-text";
 import { MaterialIcons } from "@expo/vector-icons";
 import { View } from "react-native";
@@ -36,6 +38,23 @@ export function GoalsList({
   onEdit,
   onDelete,
 }: GoalsListProps) {
+  const getMyContributions = useCallback(
+    (goal: GoalRecord): GoalContribution[] =>
+      Object.entries(goal.sharedLogs ?? {})
+        .filter(([, log]: [string, any]) => !log?.userUid || log.userUid === userUid)
+        .map(([logKey, log]: [string, any]) => ({
+          amount: Number(log?.amount ?? 0),
+          currency: String(
+            log?.currency || normalizeCurrencyCode(goal.goalTargetCurrency) || "usd",
+          ),
+          createdAt: Number(log?.createdAt ?? logKey ?? 0),
+          reason: String(log?.reason || ""),
+        }))
+        .filter((log: GoalContribution) => Number.isFinite(log.amount) && log.amount > 0)
+        .sort((a: GoalContribution, b: GoalContribution) => b.createdAt - a.createdAt),
+    [userUid],
+  );
+
   if (goals.length === 0) {
     return (
       <View style={styles.emptyState}>
@@ -67,22 +86,7 @@ export function GoalsList({
           targetAmount={goal.goalTargetAmount ?? 0}
           targetCurrency={goal.goalTargetCurrency ?? "usd"}
           targetDate={goal.goalTargetDate ?? 0}
-          myContributions={Object.entries(goal.sharedLogs ?? {})
-            .filter(
-              ([, log]: [string, any]) => !log?.userUid || log.userUid === userUid,
-            )
-            .map(([logKey, log]: [string, any]) => ({
-              amount: Number(log?.amount ?? 0),
-              currency: String(
-                log?.currency ||
-                  normalizeCurrencyCode(goal.goalTargetCurrency) ||
-                  "usd",
-              ),
-              createdAt: Number(log?.createdAt ?? logKey ?? 0),
-              reason: String(log?.reason || ""),
-            }))
-            .filter((log: any) => Number.isFinite(log.amount) && log.amount > 0)
-            .sort((a: any, b: any) => b.createdAt - a.createdAt)}
+          myContributions={getMyContributions(goal)}
           onContribute={() => onContribute(goal)}
           onEdit={() => onEdit(goal)}
           onDelete={() => onDelete(goal)}

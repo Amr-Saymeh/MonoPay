@@ -1,5 +1,10 @@
-import { GoalsScreenContent } from "./goals-components/GoalsScreenContent";
+import { GoalsScreenProvider } from "./goals-screen/GoalsScreenProvider";
+import { GoalsScreenView } from "./goals-screen/GoalsScreenView";
 
 export default function GoalsScreen() {
-  return <GoalsScreenContent />;
+  return (
+    <GoalsScreenProvider>
+      <GoalsScreenView />
+    </GoalsScreenProvider>
+  );
 }

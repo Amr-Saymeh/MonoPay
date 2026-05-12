@@ -8,88 +8,83 @@ import type { IncomeSource, SourceType } from "../services/incomeSavings.service
 import { IncomeSourceDeleteSheet } from "./IncomeSourceDeleteSheet";
 
 type IncomeSavingsFeedbackSheetsProps = {
-  deleteSheetRef: any;
-  deleteSheetSnapPoints: string[];
-  isDark: boolean;
-  theme: any;
-  pendingDeleteSource: IncomeSource | null;
-  interpolate: (template: string, values: Record<string, string>) => string;
-  getSourceTypeLabel: (sourceType: SourceType) => string;
-  deleteTitle: string;
-  deletePrompt: string;
-  deletePromptGeneric: string;
-  cancelLabel: string;
-  deleteLabel: string;
-  confirmLabel: string;
-  onCancelDelete: () => void;
-  onConfirmDelete: () => void;
-  onDismissDelete: () => void;
-  successSheetRef: any;
-  successTitle: string;
-  successDescription: string;
-  successIcon: any;
+  appearance: {
+    isDark: boolean;
+    theme: any;
+  };
+  deletion: {
+    sheetRef: any;
+    snapPoints: string[];
+    pendingSource: IncomeSource | null;
+    onCancel: () => void;
+    onConfirm: () => void;
+    onDismiss: () => void;
+  };
+  success: {
+    sheetRef: any;
+    title: string;
+    description: string;
+    icon: any;
+  };
+  labels: {
+    deleteTitle: string;
+    deletePrompt: string;
+    deletePromptGeneric: string;
+    cancel: string;
+    delete: string;
+    confirm: string;
+  };
+  helpers: {
+    interpolate: (template: string, values: Record<string, string>) => string;
+    getSourceTypeLabel: (sourceType: SourceType) => string;
+  };
 };
 
 export function IncomeSavingsFeedbackSheets({
-  deleteSheetRef,
-  deleteSheetSnapPoints,
-  isDark,
-  theme,
-  pendingDeleteSource,
-  interpolate,
-  getSourceTypeLabel,
-  deleteTitle,
-  deletePrompt,
-  deletePromptGeneric,
-  cancelLabel,
-  deleteLabel,
-  confirmLabel,
-  onCancelDelete,
-  onConfirmDelete,
-  onDismissDelete,
-  successSheetRef,
-  successTitle,
-  successDescription,
-  successIcon,
+  appearance,
+  deletion,
+  success,
+  labels,
+  helpers,
 }: IncomeSavingsFeedbackSheetsProps) {
   return (
     <>
       <IncomeSourceDeleteSheet
-        modalRef={deleteSheetRef}
-        snapPoints={deleteSheetSnapPoints}
+        modalRef={deletion.sheetRef}
+        snapPoints={deletion.snapPoints}
         bottomInset={INCOME_BOTTOM_SHEET_INSET}
-        isDark={isDark}
-        backgroundColor={theme.sheetBg}
-        handleColor={theme.sheetHandle}
-        titleColor={theme.sheetTitle}
-        textColor={theme.sheetText}
-        borderColor={theme.sheetBorder}
-        title={deleteTitle}
+        isDark={appearance.isDark}
+        backgroundColor={appearance.theme.sheetBg}
+        handleColor={appearance.theme.sheetHandle}
+        titleColor={appearance.theme.sheetTitle}
+        textColor={appearance.theme.sheetText}
+        borderColor={appearance.theme.sheetBorder}
+        title={labels.deleteTitle}
         description={
-          pendingDeleteSource
-            ? interpolate(deletePrompt, {
-                type: getSourceTypeLabel(pendingDeleteSource.type),
-                wallet: pendingDeleteSource.walletName,
+          deletion.pendingSource
+            ? helpers.interpolate(labels.deletePrompt, {
+                type: helpers.getSourceTypeLabel(deletion.pendingSource.type),
+                wallet: deletion.pendingSource.walletName,
               })
-            : deletePromptGeneric
+            : labels.deletePromptGeneric
         }
-        cancelLabel={cancelLabel}
-        deleteLabel={deleteLabel}
-        onCancel={onCancelDelete}
-        onConfirm={onConfirmDelete}
-        onDismiss={onDismissDelete}
+        cancelLabel={labels.cancel}
+        deleteLabel={labels.delete}
+        onCancel={deletion.onCancel}
+        onConfirm={deletion.onConfirm}
+        onDismiss={deletion.onDismiss}
       />
 
       <FeedbackBottomSheet
-        modalRef={successSheetRef}
-        isDark={isDark}
-        title={successTitle}
-        description={successDescription}
-        actionLabel={confirmLabel}
-        titleIcon={successIcon}
+        modalRef={success.sheetRef}
+        isDark={appearance.isDark}
+        title={success.title}
+        description={success.description}
+        actionLabel={labels.confirm}
+        titleIcon={success.icon}
         actionIcon="check-circle"
         bottomInset={INCOME_SUCCESS_BOTTOM_SHEET_INSET}
-        onAction={() => successSheetRef.current?.dismiss()}
+        onAction={() => success.sheetRef.current?.dismiss()}
       />
     </>
   );
