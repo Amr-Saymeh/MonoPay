@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-import { ActivityIndicator, Alert, Platform, View } from "react-native";
+import { Alert, View } from "react-native";
 
 import ParallaxScrollView from "@/components/parallax-scroll-view";
 import { ThemedText } from "@/components/themed-text";
@@ -16,71 +16,45 @@ import { approveUser, rejectUser } from "./utils";
 
 export default function ApproveUsersScreen() {
   const { t } = useI18n();
-  const { loading, pendingUsers } = usePendingUsers();
-  const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
-
+  const { pendingUsers } = usePendingUsers();
+  const [expandedPendingUserId, setExpandedPendingUserId] = useState<string | null>(null);
   const pendingCount = pendingUsers.length;
-  const labels = {
-    address: t("address"),
-    approve: t("approveAction"),
-    email: t("email"),
-    identity: t("identity"),
-    identityNumber: t("identityNumberLabel"),
-    personal: t("personal"),
-    phone: t("phone"),
-    reject: t("rejectAction"),
-  };
+  const approveActionText = t("approveAction");
+  const rejectActionText = t("rejectAction");
+  const emailLabel = t("email");
+  const phoneLabel = t("phone");
+  const addressLabel = t("address");
+  const identityNumberLabel = t("identityNumberLabel");
+  const personalLabel = t("personal");
+  const identityLabel = t("identity");
 
-  const confirmWeb = (title: string, message: string) => {
-    const confirmFn = (globalThis as any).confirm;
-    if (typeof confirmFn === "function") return Boolean(confirmFn(`${title}\n\n${message}`));
-    return true;
-  };
-
-  const handleApprove = (userId: string, userName?: string) => {
+  function approvePendingUser(userId: string, userName?: string) {
     const title = t("approveUserTitle");
-    const message = `${labels.approve} ${userName ?? userId}?`;
-
-    const run = async () => {
-      await approveUser(userId);
-    };
-
-    if (Platform.OS === "web") {
-      if (!confirmWeb(title, message)) return;
-      void run();
-      return;
-    }
+    const message = `${approveActionText} ${userName ?? userId}?`;
 
     Alert.alert(title, message, [
       { text: t("cancel"), style: "cancel" },
       {
-        text: labels.approve,
+        text: approveActionText,
         style: "default",
-        onPress: () => void run(),
+        onPress: () => void approveUser(userId),
       },
     ]);
-  };
+  }
 
-  const handleReject = (userId: string, userName?: string) => {
+  function rejectPendingUser(userId: string, userName?: string) {
     const title = t("rejectUserTitle");
-    const message = `${labels.reject} ${userName ?? userId}?`;
-    const run = async () => {
-      await rejectUser(userId);
-    };
-    if (Platform.OS === "web") {
-      if (!confirmWeb(title, message)) return;
-      void run();
-      return;
-    }
+    const message = `${rejectActionText} ${userName ?? userId}?`;
+
     Alert.alert(title, message, [
       { text: t("cancel"), style: "cancel" },
       {
-        text: labels.reject,
+        text: rejectActionText,
         style: "destructive",
-        onPress: () => void run(),
+        onPress: () => void rejectUser(userId),
       },
     ]);
-  };
+  }
 
   return (
     <ParallaxScrollView
@@ -107,11 +81,7 @@ export default function ApproveUsersScreen() {
 
       <ThemedText style={styles.subtitle}>{t("pendingVerification")}</ThemedText>
 
-      {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator />
-        </View>
-      ) : pendingUsers.length === 0 ? (
+      {pendingCount === 0 ? (
         <ThemedView style={styles.emptyState}>
           <ThemedText type="subtitle">{t("noPendingUsers")}</ThemedText>
           <ThemedText style={styles.emptyText}>{t("usersWithType0")}</ThemedText>
@@ -119,24 +89,26 @@ export default function ApproveUsersScreen() {
       ) : (
         <View style={styles.list}>
           {pendingUsers.map((item) => {
-            const isExpanded = expandedUserId === item.id;
+            const isExpanded = expandedPendingUserId === item.id;
 
             return (
               <PendingUserCard
                 key={item.id}
                 item={item}
                 expanded={isExpanded}
-                approveLabel={labels.approve}
-                rejectLabel={labels.reject}
-                emailLabel={labels.email}
-                phoneLabel={labels.phone}
-                addressLabel={labels.address}
-                identityNumberLabel={labels.identityNumber}
-                personalLabel={labels.personal}
-                identityLabel={labels.identity}
-                onToggle={() => setExpandedUserId((current) => (current === item.id ? null : item.id))}
-                onApprove={() => handleApprove(item.id, item.data.name)}
-                onReject={() => handleReject(item.id, item.data.name)}
+                approveLabel={approveActionText}
+                rejectLabel={rejectActionText}
+                emailLabel={emailLabel}
+                phoneLabel={phoneLabel}
+                addressLabel={addressLabel}
+                identityNumberLabel={identityNumberLabel}
+                personalLabel={personalLabel}
+                identityLabel={identityLabel}
+                onToggle={() =>
+                  setExpandedPendingUserId((current) => (current === item.id ? null : item.id))
+                }
+                onApprove={() => approvePendingUser(item.id, item.data.name)}
+                onReject={() => rejectPendingUser(item.id, item.data.name)}
               />
             );
           })}
