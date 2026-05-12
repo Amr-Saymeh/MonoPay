@@ -1,4 +1,4 @@
-import { SummaryCard } from "@/components/income-savings/SummaryCard";
+import { SummaryCard } from "./SummaryCard";
 import { ThemedText } from "@/components/themed-text";
 import { hapticSelection } from "@/src/utils/haptics";
 import { MaterialIcons } from "@expo/vector-icons";

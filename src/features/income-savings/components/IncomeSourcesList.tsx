@@ -1,4 +1,4 @@
-import { EntryCard } from "@/components/income-savings/EntryCard";
+import { EntryCard } from "./EntryCard";
 import { FlatList } from "react-native";
 
 import type { IncomeSource, SourceType } from "../services/incomeSavings.service";

@@ -53,6 +53,7 @@ export function useGoalsScreenModel() {
     Platform.OS,
     insets.bottom,
   );
+  
   const scrollBottomSpacing = floatingButtonBottom + 86;
   const overallProgress =
     totalTarget > 0 ? Math.min(totalSaved / totalTarget, 1) : 0;

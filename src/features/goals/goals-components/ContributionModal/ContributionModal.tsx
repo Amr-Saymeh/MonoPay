@@ -56,6 +56,7 @@ export const ContributionModal = ({
 
   const { control, watch, setValue, reset, handleSubmit } =
     useForm<ContributionFormValues>({
+      mode: "all",
       defaultValues: {
         amount: "",
         reason: "",

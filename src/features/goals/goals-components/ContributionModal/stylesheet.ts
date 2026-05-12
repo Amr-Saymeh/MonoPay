@@ -92,6 +92,12 @@ export const styles = StyleSheet.create({
     paddingVertical: 13,
     fontSize: 16,
   },
+  fieldError: {
+    color: "#EF4444",
+    fontSize: 12,
+    fontWeight: "600",
+    marginTop: 6,
+  },
   textArea: { height: 90, paddingTop: 12 },
 
   buttons: {
