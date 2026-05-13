@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { onValue, ref } from "firebase/database";
 
 import { db } from "@/src/firebaseConfig";
+import { subscribeIncomeSources } from "@/src/services/incomeSources.service";
 
 import {
     belongsToUserPurchase,
@@ -81,13 +82,45 @@ export function useSpendingInsightsData({
           .filter((item) => item.amount > 0 && item.timestamp > 0);
 
         setEntries((prev) => [
-          ...prev.filter((item) => item.source === "purchase"),
+          ...prev.filter(
+            (item) => item.source === "purchase" || item.source === "income",
+          ),
           ...txEntries,
         ]);
         setLoaded(true);
       },
       () => setLoaded(true),
     );
+
+    const offIncome = subscribeIncomeSources(uid, (sources) => {
+      const incomeEntries = sources
+        .map((raw) => {
+          const cat = normalizeCategory(raw?.type, language);
+          return {
+            id: raw.id,
+            source: "income" as const,
+            amount: Number(raw?.amount ?? 0),
+            currency: normalizeCurrency(raw?.currency),
+            type: "receive" as const,
+            title: String(cat.label),
+            note: String(raw?.notes ?? raw?.walletName ?? ""),
+            categoryKey: cat.key,
+            categoryLabel: cat.label,
+            color: cat.color,
+            icon: cat.icon,
+            timestamp: parseTimestamp(raw),
+          } satisfies Entry;
+        })
+        .filter((item) => item.amount > 0 && item.timestamp > 0);
+
+      setEntries((prev) => [
+        ...prev.filter(
+          (item) => item.source === "transaction" || item.source === "purchase",
+        ),
+        ...incomeEntries,
+      ]);
+      setLoaded(true);
+    });
 
     const offPurchases = onValue(
       purchasesRef,
@@ -115,7 +148,9 @@ export function useSpendingInsightsData({
           .filter((item) => item.amount > 0 && item.timestamp > 0);
 
         setEntries((prev) => [
-          ...prev.filter((item) => item.source === "transaction"),
+          ...prev.filter(
+            (item) => item.source === "transaction" || item.source === "income",
+          ),
           ...purchaseEntries,
         ]);
         setLoaded(true);
@@ -125,6 +160,7 @@ export function useSpendingInsightsData({
 
     return () => {
       offTx();
+      offIncome();
       offPurchases();
     };
   }, [language, uid]);

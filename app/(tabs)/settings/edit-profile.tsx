@@ -14,17 +14,12 @@ import { useThemeColor } from "@/hooks/use-theme-color";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { updateUserProfile } from "@/src/services/user.service";
 
-function splitName(full: string) {
-  const parts = full.trim().split(/\s+/).filter(Boolean);
-  if (parts.length <= 1) return { first: full.trim(), last: "" };
-  return { first: parts.slice(0, -1).join(" "), last: parts.at(-1) ?? "" };
-}
+import { splitName } from "@/src/features/settings/utils/profile";
 
 export default function EditProfileScreen() {
   const { t } = useI18n();
   const router = useRouter();
   const { user, profile } = useAuth();
-
   const border = useThemeColor({}, "border");
   const surface = useThemeColor({}, "surface");
   const surfacePressed = useThemeColor({}, "surfacePressed");
@@ -32,6 +27,7 @@ export default function EditProfileScreen() {
   const initial = useMemo(() => {
     const name = profile?.name ?? "";
     const { first, last } = splitName(name);
+
     return {
       first,
       last,
@@ -48,11 +44,7 @@ export default function EditProfileScreen() {
 
   const avatarUri = profile?.personalImage;
   const email = user?.email ?? profile?.email ?? "";
-
-  const canSave =
-    firstName.trim().length > 0 &&
-    phone.trim().length > 0 &&
-    address.trim().length > 0;
+  const canSave = firstName.trim().length > 0 && phone.trim().length > 0 && address.trim().length > 0;
 
   const onSave = async () => {
     if (!user) return;
@@ -66,9 +58,8 @@ export default function EditProfileScreen() {
       });
       Alert.alert(t("welcome"), t("saved"));
       router.back();
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Failed";
-      Alert.alert(t("error"), msg);
+    } catch (error) {
+      Alert.alert(t("error"), error instanceof Error ? error.message : "Failed");
     } finally {
       setSaving(false);
     }
@@ -76,24 +67,13 @@ export default function EditProfileScreen() {
 
   return (
     <ThemedView style={styles.screen}>
-      <View
-        style={[styles.card, { borderColor: border, backgroundColor: surface }]}
-      >
+      <View style={[styles.card, { borderColor: border, backgroundColor: surface }]}>
         <View style={styles.avatarRow}>
           <View style={styles.avatarWrap}>
             {typeof avatarUri === "string" && avatarUri.trim().length > 0 ? (
-              <Image
-                source={{ uri: avatarUri }}
-                style={styles.avatar}
-                contentFit="cover"
-              />
+              <Image source={{ uri: avatarUri }} style={styles.avatar} contentFit="cover" />
             ) : (
-              <View
-                style={[
-                  styles.avatarPlaceholder,
-                  { backgroundColor: surfacePressed },
-                ]}
-              />
+              <View style={[styles.avatarPlaceholder, { backgroundColor: surfacePressed }]} />
             )}
           </View>
           <View style={styles.avatarText}>
@@ -103,43 +83,21 @@ export default function EditProfileScreen() {
             <ThemedText style={{ opacity: 0.7 }}>{email}</ThemedText>
             <GradientButton
               label={t("retakePhoto")}
-              onPress={() =>
-                router.push("/(tabs)/settings/avatar-camera" as any)
-              }
+              onPress={() => router.push("/(tabs)/settings/avatar-camera" as any)}
               style={{ marginTop: 10 }}
             />
           </View>
         </View>
 
         <View style={styles.form}>
-          <AuthInput
-            value={firstName}
-            onChangeText={setFirstName}
-            placeholder={t("firstName")}
-            autoCapitalize="words"
-          />
-          <AuthInput
-            value={lastName}
-            onChangeText={setLastName}
-            placeholder={t("lastName")}
-            autoCapitalize="words"
-          />
-          <AuthInput
-            value={phone}
-            onChangeText={setPhone}
-            placeholder={t("phone")}
-            keyboardType="phone-pad"
-          />
-          <AuthInput
-            value={address}
-            onChangeText={setAddress}
-            placeholder={t("address")}
-            autoCapitalize="sentences"
-          />
+          <AuthInput value={firstName} onChangeText={setFirstName} placeholder={t("firstName")} autoCapitalize="words" />
+          <AuthInput value={lastName} onChangeText={setLastName} placeholder={t("lastName")} autoCapitalize="words" />
+          <AuthInput value={phone} onChangeText={setPhone} placeholder={t("phone")} keyboardType="phone-pad" />
+          <AuthInput value={address} onChangeText={setAddress} placeholder={t("address")} autoCapitalize="sentences" />
 
           <GradientButton
             label={t("save")}
-            onPress={onSave}
+            onPress={() => void onSave()}
             disabled={!canSave}
             loading={saving}
           />

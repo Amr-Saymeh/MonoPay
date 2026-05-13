@@ -19,7 +19,7 @@ export default function Index() {
     if (!profileLoaded) return;
 
     if (!profile) {
-      router.replace("/(auth)/welcome" as any);
+      router.replace("/(auth)/login" as any);
       return;
     }
 

@@ -50,7 +50,6 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-
   profileCard: {
     borderRadius: 24,
     padding: 20,
@@ -103,7 +102,6 @@ export const styles = StyleSheet.create({
     letterSpacing: 1.2,
     textTransform: "uppercase",
   },
-
   sectionLabel: {
     fontFamily: Fonts.sansBold,
     fontSize: 15,
@@ -113,7 +111,6 @@ export const styles = StyleSheet.create({
   sectionLabelRtl: {
     textAlign: "right",
   },
-
   rowCard: {
     borderRadius: 20,
     marginBottom: 12,
@@ -154,7 +151,6 @@ export const styles = StyleSheet.create({
   rowChevron: {
     opacity: 0.5,
   },
-
   logoutBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -170,7 +166,6 @@ export const styles = StyleSheet.create({
     fontFamily: Fonts.sansBold,
     fontSize: 16,
   },
-
   textRtl: {
     textAlign: "right",
   },

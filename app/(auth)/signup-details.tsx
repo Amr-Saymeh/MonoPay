@@ -1,58 +1,40 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 
-import { useFocusEffect } from "@react-navigation/native";
-import { Link, useRouter } from "expo-router";
-import * as ScreenCapture from "expo-screen-capture";
-import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  View,
-  findNodeHandle,
-  type TextInput,
-} from "react-native";
-import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
+import { useRouter } from "expo-router";
+import { Controller, useForm, useWatch } from "react-hook-form";
+import { Alert, View, type TextInput } from "react-native";
+import Animated, { FadeInUp } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { LanguageSwitch } from "@/components/language-switch";
-import { ThemedText } from "@/components/themed-text";
-import { ThemedView } from "@/components/themed-view";
 import { AuthInput } from "@/components/ui/auth-input";
 import { GradientButton } from "@/components/ui/gradient-button";
-import { Fonts } from "@/constants/theme";
 import { useI18n } from "@/hooks/use-i18n";
-import { useSignup } from "@/hooks/use-signup-flow";
 import { useThemeColor } from "@/hooks/use-theme-color";
+import { useSignupFlow } from "@/src/providers/SignupFlowProvider";
 
-function isValidEmail(email: string) {
-  return /^\S+@\S+\.\S+$/.test(email.trim());
-}
+import { AuthFooterLink } from "@/src/features/auth/components/AuthFooterLink";
+import { AuthScreenHeader } from "@/src/features/auth/components/AuthScreenHeader";
+import { AuthScreenShell } from "@/src/features/auth/components/AuthScreenShell";
+import { useAuthFormScreen } from "@/src/features/auth/hooks/useAuthFormScreen";
+import { authFormStyles } from "@/src/features/auth/styles/formScreens";
+import {
+    getSignupValidationError,
+    isValidEmail,
+    type SignupValues,
+} from "@/src/features/auth/utils/signupValidation";
 
 export default function SignupDetailsScreen() {
   const { t, isRtl } = useI18n();
   const router = useRouter();
-  const { setDetails, clear } = useSignup();
+  const { details, setDetails, clear } = useSignupFlow();
   const insets = useSafeAreaInsets();
-
   const tint = useThemeColor({}, "tint");
-
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
-  const [pin, setPin] = useState("");
-  const [confirmPin, setConfirmPin] = useState("");
-  const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
-  const [identityNumber, setIdentityNumber] = useState("");
 
   const [securePin, setSecurePin] = useState(true);
   const [secureConfirm, setSecureConfirm] = useState(true);
   const [continuing, setContinuing] = useState(false);
 
-  const scrollRef = useRef<ScrollView>(null);
-  const continueLockRef = useRef(false);
+  const { scrollRef, scrollToField } = useAuthFormScreen();
   const firstNameRef = useRef<TextInput>(null);
   const lastNameRef = useRef<TextInput>(null);
   const emailRef = useRef<TextInput>(null);
@@ -62,147 +44,83 @@ export default function SignupDetailsScreen() {
   const addressRef = useRef<TextInput>(null);
   const identityNumberRef = useRef<TextInput>(null);
 
-  useFocusEffect(
-    useCallback(() => {
-      if (Platform.OS === "web") return;
-      void ScreenCapture.allowScreenCaptureAsync();
-    }, []),
+  const defaultValues = useMemo<SignupValues>(
+    () => ({
+      address: details?.address ?? "",
+      confirmPin: details?.pin ?? "",
+      email: details?.email ?? "",
+      firstName: details?.firstName ?? "",
+      identityNumber: details?.identityNumber ?? "",
+      lastName: details?.lastName ?? "",
+      phone: details?.phone ?? "",
+      pin: details?.pin ?? "",
+    }),
+    [details],
   );
 
-  const scrollToField = (fieldRef: React.RefObject<TextInput | null>) => {
-    const node = findNodeHandle(fieldRef.current);
-    if (!node) return;
+  const { control, formState, handleSubmit } = useForm<SignupValues>({
+    defaultValues,
+    mode: "onChange",
+  });
 
-    setTimeout(() => {
-      (scrollRef.current as any)?.scrollResponderScrollNativeHandleToKeyboard?.(
-        node,
-        96,
-        true,
-      );
-    }, Platform.OS === "android" ? 80 : 0);
-  };
+  const pinValue = useWatch({ control, name: "pin" });
+  const canContinue = formState.isValid && !continuing;
 
-  const canContinue = useMemo(() => {
-    return (
-      firstName.trim().length > 0 &&
-      lastName.trim().length > 0 &&
-      isValidEmail(email) &&
-      phone.trim().length > 0 &&
-      pin.trim().length >= 6 &&
-      pin === confirmPin &&
-      address.trim().length > 0 &&
-      identityNumber.trim().length > 0
+  const onContinue = handleSubmit((values) => {
+    if (continuing) return;
+
+    const error = getSignupValidationError(
+      {
+        address: values.address,
+        confirmPin: values.confirmPin,
+        email: values.email,
+        firstName: values.firstName,
+        identityNumber: values.identityNumber,
+        lastName: values.lastName,
+        phone: values.phone,
+        pin: values.pin,
+      },
+      t,
     );
-  }, [
-    firstName,
-    lastName,
-    email,
-    phone,
-    pin,
-    confirmPin,
-    address,
-    identityNumber,
-  ]);
 
-  const onContinue = () => {
-    if (continueLockRef.current || continuing) return;
-
-    if (
-      !firstName.trim() ||
-      !lastName.trim() ||
-      !email.trim() ||
-      !phone.trim() ||
-      !pin.trim() ||
-      !confirmPin.trim() ||
-      !address.trim() ||
-      !identityNumber.trim()
-    ) {
-      Alert.alert(t("error"), t("fillAllFields"));
-      return;
-    }
-
-    if (!isValidEmail(email)) {
-      Alert.alert(t("error"), t("invalidEmail"));
-      return;
-    }
-
-    if (pin.trim().length < 6) {
-      Alert.alert(t("error"), t("pinTooShort"));
-      return;
-    }
-
-    if (pin !== confirmPin) {
-      Alert.alert(t("error"), t("pinMismatch"));
-      return;
-    }
-
-    const idValue = Number(identityNumber);
-    if (!Number.isFinite(idValue)) {
-      Alert.alert(t("error"), t("invalidIdNumber"));
+    if (error) {
+      Alert.alert(t("error"), error);
       return;
     }
 
     clear();
     setDetails({
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
-      email: email.trim(),
-      pin,
-      phone: phone.trim(),
-      address: address.trim(),
-      identityNumber: identityNumber.trim(),
+      firstName: values.firstName.trim(),
+      lastName: values.lastName.trim(),
+      email: values.email.trim(),
+      pin: values.pin,
+      phone: values.phone.trim(),
+      address: values.address.trim(),
+      identityNumber: values.identityNumber.trim(),
     });
 
-    continueLockRef.current = true;
     setContinuing(true);
-    router.push("/category-suggestions" as any);
-  };
-
-  useEffect(() => {
-    if (!continuing) return;
-    const timer = setTimeout(() => {
-      continueLockRef.current = false;
-      setContinuing(false);
-    }, 1200);
-    return () => clearTimeout(timer);
-  }, [continuing]);
+    router.push("/(tabs)/settings/category-suggestions" as any);
+  });
 
   return (
-    <ThemedView style={styles.screen}>
-      <LanguageSwitch />
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 24 : 0}
-      >
-        <ScrollView
-          ref={scrollRef}
-          contentContainerStyle={[
-            styles.content,
-            { paddingBottom: Math.max(60, insets.bottom + 24) },
-          ]}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-          showsVerticalScrollIndicator={false}
-        >
-          <Animated.View
-            entering={FadeInDown.duration(450)}
-            style={styles.header}
-          >
-            <ThemedText style={styles.title}>{t("signUp")}</ThemedText>
-            <ThemedText style={styles.brand}>
-              {t("appName").toUpperCase()}
-            </ThemedText>
-          </Animated.View>
+    <AuthScreenShell
+      scrollRef={scrollRef}
+      bottomInset={insets.bottom}
+      contentStyle={authFormStyles.signupContent}
+    >
+      <AuthScreenHeader title={t("signUp")} />
 
-          <Animated.View
-            entering={FadeInUp.duration(450).delay(80)}
-            style={styles.form}
-          >
+      <Animated.View entering={FadeInUp.duration(450).delay(80)} style={authFormStyles.form}>
+        <Controller
+          control={control}
+          name="firstName"
+          rules={{ required: true, validate: (value) => value.trim().length > 0 }}
+          render={({ field: { onChange, value } }) => (
             <AuthInput
               ref={firstNameRef}
-              value={firstName}
-              onChangeText={setFirstName}
+              value={value}
+              onChangeText={onChange}
               placeholder={t("firstName")}
               autoCapitalize="words"
               returnKeyType="next"
@@ -210,10 +128,17 @@ export default function SignupDetailsScreen() {
               onFocus={() => scrollToField(firstNameRef)}
               onSubmitEditing={() => lastNameRef.current?.focus()}
             />
+          )}
+        />
+        <Controller
+          control={control}
+          name="lastName"
+          rules={{ required: true, validate: (value) => value.trim().length > 0 }}
+          render={({ field: { onChange, value } }) => (
             <AuthInput
               ref={lastNameRef}
-              value={lastName}
-              onChangeText={setLastName}
+              value={value}
+              onChangeText={onChange}
               placeholder={t("lastName")}
               autoCapitalize="words"
               returnKeyType="next"
@@ -221,10 +146,17 @@ export default function SignupDetailsScreen() {
               onFocus={() => scrollToField(lastNameRef)}
               onSubmitEditing={() => emailRef.current?.focus()}
             />
+          )}
+        />
+        <Controller
+          control={control}
+          name="email"
+          rules={{ required: true, validate: (value) => isValidEmail(value) }}
+          render={({ field: { onChange, value } }) => (
             <AuthInput
               ref={emailRef}
-              value={email}
-              onChangeText={setEmail}
+              value={value}
+              onChangeText={onChange}
               placeholder={t("email")}
               keyboardType="email-address"
               textContentType="emailAddress"
@@ -234,11 +166,17 @@ export default function SignupDetailsScreen() {
               onFocus={() => scrollToField(emailRef)}
               onSubmitEditing={() => phoneRef.current?.focus()}
             />
-
+          )}
+        />
+        <Controller
+          control={control}
+          name="phone"
+          rules={{ required: true, validate: (value) => value.trim().length > 0 }}
+          render={({ field: { onChange, value } }) => (
             <AuthInput
               ref={phoneRef}
-              value={phone}
-              onChangeText={setPhone}
+              value={value}
+              onChangeText={onChange}
               placeholder={t("phone")}
               keyboardType="phone-pad"
               textContentType="telephoneNumber"
@@ -247,39 +185,60 @@ export default function SignupDetailsScreen() {
               onFocus={() => scrollToField(phoneRef)}
               onSubmitEditing={() => pinRef.current?.focus()}
             />
-
+          )}
+        />
+        <Controller
+          control={control}
+          name="pin"
+          rules={{ required: true, validate: (value) => value.trim().length >= 6 }}
+          render={({ field: { onChange, value } }) => (
             <AuthInput
               ref={pinRef}
-              value={pin}
-              onChangeText={setPin}
+              value={value}
+              onChangeText={onChange}
               placeholder={t("pin")}
               secureTextEntry={securePin}
-              onToggleSecure={() => setSecurePin((s) => !s)}
+              onToggleSecure={() => setSecurePin((current) => !current)}
               keyboardType="number-pad"
               returnKeyType="next"
               blurOnSubmit={false}
               onFocus={() => scrollToField(pinRef)}
               onSubmitEditing={() => confirmPinRef.current?.focus()}
             />
-
+          )}
+        />
+        <Controller
+          control={control}
+          name="confirmPin"
+          rules={{
+            required: true,
+            validate: (value) => value.trim().length > 0 && value === pinValue,
+          }}
+          render={({ field: { onChange, value } }) => (
             <AuthInput
               ref={confirmPinRef}
-              value={confirmPin}
-              onChangeText={setConfirmPin}
+              value={value}
+              onChangeText={onChange}
               placeholder={t("confirmPin")}
               secureTextEntry={secureConfirm}
-              onToggleSecure={() => setSecureConfirm((s) => !s)}
+              onToggleSecure={() => setSecureConfirm((current) => !current)}
               keyboardType="number-pad"
               returnKeyType="next"
               blurOnSubmit={false}
               onFocus={() => scrollToField(confirmPinRef)}
               onSubmitEditing={() => addressRef.current?.focus()}
             />
-
+          )}
+        />
+        <Controller
+          control={control}
+          name="address"
+          rules={{ required: true, validate: (value) => value.trim().length > 0 }}
+          render={({ field: { onChange, value } }) => (
             <AuthInput
               ref={addressRef}
-              value={address}
-              onChangeText={setAddress}
+              value={value}
+              onChangeText={onChange}
               placeholder={t("address")}
               autoCapitalize="sentences"
               returnKeyType="next"
@@ -287,101 +246,46 @@ export default function SignupDetailsScreen() {
               onFocus={() => scrollToField(addressRef)}
               onSubmitEditing={() => identityNumberRef.current?.focus()}
             />
+          )}
+        />
+        <Controller
+          control={control}
+          name="identityNumber"
+          rules={{
+            required: true,
+            validate: (value) => value.trim().length > 0 && Number.isFinite(Number(value)),
+          }}
+          render={({ field: { onChange, value } }) => (
             <AuthInput
               ref={identityNumberRef}
-              value={identityNumber}
-              onChangeText={setIdentityNumber}
+              value={value}
+              onChangeText={onChange}
               placeholder={t("idNumber")}
               keyboardType="number-pad"
               returnKeyType="done"
               onFocus={() => scrollToField(identityNumberRef)}
-              onSubmitEditing={onContinue}
+              onSubmitEditing={() => void onContinue()}
             />
+          )}
+        />
 
-            <GradientButton
-              label={t("continue")}
-              onPress={onContinue}
-              disabled={continuing}
-              style={
-                !canContinue || continuing
-                  ? { opacity: 0.6 }
-                  : undefined
-              }
-            />
-          </Animated.View>
+        <GradientButton
+          label={t("continue")}
+          onPress={() => void onContinue()}
+          disabled={!canContinue}
+          style={!canContinue ? { opacity: 0.6 } : undefined}
+        />
+      </Animated.View>
 
-          <View style={styles.footer}>
-            <View
-              style={[styles.footerRow, isRtl ? styles.footerRowRtl : null]}
-            >
-              <ThemedText style={styles.footerMuted}>
-                {t("alreadyHaveAccount")}{" "}
-              </ThemedText>
-              <Link href={"/(auth)/login" as any} style={styles.link}>
-                <ThemedText style={[styles.linkText, { color: tint }]}>
-                  {t("signIn")}
-                </ThemedText>
-              </Link>
-            </View>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </ThemedView>
+      <View style={authFormStyles.signupFooter}>
+        <AuthFooterLink
+          href={"/(auth)/login" as any}
+          isRtl={isRtl}
+          label={t("signIn")}
+          prompt={t("alreadyHaveAccount")}
+          tint={tint}
+        />
+      </View>
+    </AuthScreenShell>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-  },
-  flex: {
-    flex: 1,
-  },
-  content: {
-    paddingHorizontal: 24,
-    paddingTop: 88,
-    paddingBottom: 60,
-  },
-  header: {
-    alignItems: "center",
-    marginBottom: 22,
-    gap: 10,
-  },
-  title: {
-    fontSize: 40,
-    lineHeight: 48,
-    fontFamily: Fonts.rounded,
-    includeFontPadding: false,
-  },
-  brand: {
-    fontSize: 22,
-    lineHeight: 28,
-    letterSpacing: 1.5,
-    color: "#8B5CF6",
-    fontFamily: Fonts.rounded,
-    includeFontPadding: false,
-  },
-  form: {
-    gap: 14,
-  },
-  footer: {
-    marginTop: 22,
-    alignItems: "center",
-  },
-  footerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  footerRowRtl: {
-    flexDirection: "row-reverse",
-  },
-  footerMuted: {
-    opacity: 0.7,
-  },
-  link: {
-    paddingHorizontal: 2,
-  },
-  linkText: {
-    fontFamily: Fonts.sansBold,
-  },
-});

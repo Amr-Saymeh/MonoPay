@@ -1,7 +1,8 @@
+import { getFocusedRouteNameFromRoute } from "@react-navigation/native";
 import { BlurView } from "expo-blur";
 import { Tabs } from "expo-router";
 import React from "react";
-import { StyleSheet, Platform } from "react-native";
+import { Platform, StyleSheet } from "react-native";
 
 import { HapticTab } from "@/components/haptic-tab";
 import { IconSymbol } from "@/components/ui/icon-symbol";
@@ -14,6 +15,7 @@ export default function TabLayout() {
   const { colorScheme } = useThemeMode();
 
   const activeColor = colorScheme === "dark" ? "#a78bfa" : "#6e5da9";
+  const hiddenSettingsRoutes = new Set(["category-suggestions"]);
 
   return (
     <Tabs
@@ -57,12 +59,17 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="settings"
-        options={{
+        options={({ route }) => ({
           title: t("settings"),
           tabBarIcon: ({ color }) => (
             <IconSymbol size={24} name="gearshape" color={color} />
           ),
-        }}
+          tabBarStyle: hiddenSettingsRoutes.has(
+            getFocusedRouteNameFromRoute(route) ?? "",
+          )
+            ? { display: "none" }
+            : styles.tabBar,
+        })}
       />
       <Tabs.Screen
         name="create"
@@ -78,12 +85,17 @@ export default function TabLayout() {
           tabBarStyle: { display: "none" },
         }}
       />
+      
       <Tabs.Screen
         name="income-savings"
         options={{
           href: null,
           tabBarStyle: { display: "none" },
-        }}
+        }} 
+      />
+      <Tabs.Screen
+        name="spending-insights"
+        options={{ href: null, tabBarStyle: { display: "none" } }}
       />
       <Tabs.Screen name="wallets" options={{ href: null }} />
     </Tabs>
