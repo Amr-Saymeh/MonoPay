@@ -22,11 +22,9 @@ export default function SplashLoading() {
     const ringOpacity = useSharedValue(0.5);
 
     useEffect(() => {
-        // Entrance animation for Logo
         scale.value = withSpring(1, { damping: 12, stiffness: 90 });
         opacity.value = withTiming(1, { duration: 800 });
 
-        // Pulsing Ring animation
         ringScale.value = withRepeat(
             withTiming(1.5, { duration: 2000, easing: Easing.out(Easing.ease) }),
             -1,
@@ -53,12 +51,10 @@ export default function SplashLoading() {
         <View style={styles.container}>
             <StatusBar style="light" />
             
-            {/* Animated Background Glow */}
             <View style={styles.glowContainer}>
                 <Animated.View style={[styles.ring, ringStyle]} />
             </View>
 
-            {/* Logo Container */}
             <Animated.View style={[styles.logoWrapper, logoStyle]}>
                 <Image 
                     source={require('../../../../assets/images/logo.png')} 
@@ -67,7 +63,6 @@ export default function SplashLoading() {
                 />
             </Animated.View>
 
-            {/* Loading Indicator Dots */}
             <View style={styles.loadingContainer}>
                 <LoadingDots />
             </View>

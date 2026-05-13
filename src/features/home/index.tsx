@@ -13,7 +13,10 @@ export function HomeFeature() {
     const isDark = colorScheme === 'dark';
 
     return (
-        <ScrollView style={[isDark && styles.darkBackground]}>
+        <ScrollView 
+            style={[isDark && styles.darkBackground]}
+            contentContainerStyle={{ paddingBottom: 120 }}
+        >
             <HomeHeader />
             <TotalBalance />
             <QuickActions />

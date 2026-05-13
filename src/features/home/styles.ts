@@ -26,6 +26,7 @@ export const homeStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 30,
+    marginTop: 50,
   },
   avatarWrapper: {
     width: 54,
@@ -36,12 +37,12 @@ export const homeStyles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.5)',
-    marginTop: 50,
     marginLeft: 10,
     marginRight: 12,
   },
   headerTextContainer: {
     flex: 1,
+    alignItems: 'center',
   },
   greetingWrapper: {
     width: '100%',

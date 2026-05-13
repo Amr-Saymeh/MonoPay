@@ -57,7 +57,7 @@ export default function CreateBundleForm({ onComplete, onCancel, bundle }: Creat
                 />
             </View>
 
-            {/* Items List */}
+            
             {items.length > 0 && (
                 <View style={{ marginBottom: 20 }}>
                     <Text style={{ fontSize: 14, fontWeight: '700', color: THEME.secondaryText, marginBottom: 10 }}>{t('items')}</Text>
@@ -75,7 +75,6 @@ export default function CreateBundleForm({ onComplete, onCancel, bundle }: Creat
                 </View>
             )}
 
-            {/* Add Item Form Toggle */}
             <TouchableOpacity 
                 onPress={() => setShowAddItem(!showAddItem)}
                 style={{ 
@@ -132,7 +131,6 @@ export default function CreateBundleForm({ onComplete, onCancel, bundle }: Creat
                         </View>
                     </View>
 
-                    {/* Category Selection */}
                     <Text style={styles.categoryTitle}>{t('category')}</Text>
                     <ScrollView 
                         horizontal 
@@ -171,7 +169,6 @@ export default function CreateBundleForm({ onComplete, onCancel, bundle }: Creat
                 </View>
             )}
 
-            {/* Footer */}
             <View style={{ borderTopWidth: 1, borderTopColor: '#EEE', paddingTop: 20 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                     <Text style={{ fontSize: 16, fontWeight: '600', color: THEME.secondaryText }}>{t('totalCost')}</Text>

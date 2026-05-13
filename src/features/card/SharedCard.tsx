@@ -20,6 +20,7 @@ export interface SharedCardProps {
   memberUids?: string[];
   walletState?: string;
   onCurrencyChange?: () => void;
+  children?: React.ReactNode;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -36,6 +37,7 @@ export function SharedCard({
   memberUids,
   walletState,
   onCurrencyChange,
+  children,
 }: SharedCardProps) {
   const [displayedIndex, setDisplayedIndex] = useState(0);
   const fadeAnim = useRef(new Animated.Value(1)).current;
@@ -168,6 +170,13 @@ export function SharedCard({
               <MemberActive memberUids={memberUids!} />
             </View>
           </View>
+        </>
+      )}
+
+      {children && (
+        <>
+          {!isShared && <View style={styles.divider} />}
+          {children}
         </>
       )}
     </TouchableOpacity>

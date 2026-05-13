@@ -44,7 +44,6 @@ export default function BundleCardItem({ bundle, onEdit, onDelete }: BundleCardP
   return (
     <View style={styles.cardWrapper}>
       <CardContainer>
-        {/* Header Section */}
         <View style={styles.cardHeader}>
           <View style={[
             styles.bundleIconContainer,
@@ -70,7 +69,6 @@ export default function BundleCardItem({ bundle, onEdit, onDelete }: BundleCardP
           </View>
         </View>
 
-        {/* Items Section */}
         <View>
           {(bundle.items || []).map((item, index) => {
             const meta = CATEGORY_META[item.category || ''] || { icon: '📦', bg: '#F2F2F7' };
@@ -91,7 +89,6 @@ export default function BundleCardItem({ bundle, onEdit, onDelete }: BundleCardP
           })}
         </View>
 
-        {/* Footer Section */}
         <View style={[styles.cardFooter, { borderTopColor: isPurple || isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}>
           <Text style={[styles.totalLabel, secondaryTextStyle]}>{t('totalCost')}</Text>
           <Text style={[styles.totalAmount, (isPurple || isDark) && styles.textLight, isDark && { color: '#a78bfa' }]}>
