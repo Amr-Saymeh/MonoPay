@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 import { ThemedView } from "@/components/themed-view";
 import { SharedCard } from "@/src/features/card/SharedCard";
@@ -6,33 +6,34 @@ import { SharedCard } from "@/src/features/card/SharedCard";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { push, ref, update } from "firebase/database";
 import {
-  ActivityIndicator,
-  Alert,
-  ScrollView,
-  StyleSheet,
-  View,
+    ActivityIndicator,
+    Alert,
+    ScrollView,
+    StyleSheet,
+    View,
 } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { useI18n } from "@/hooks/use-i18n";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import {
-  AmountModal,
-  BalanceActions,
-  HistorySection,
-  MemberSection,
+    AmountModal,
+    BalanceActions,
+    HistorySection,
+    MemberSection,
 } from "@/src/features/shared/components";
 import {
-  useAllUsersProfiles,
-  useMemberSuggestions,
-  useSharedWallet,
-  useSharedWalletLogs,
+    useAllUsersProfiles,
+    useMemberSuggestions,
+    useSharedWallet,
+    useSharedWalletLogs,
 } from "@/src/features/shared/hooks";
 import {
-  getNextUserWalletKey
+    getNextUserWalletKey
 } from "@/src/features/shared/utils/walletHelpers";
 import { db } from "@/src/firebaseConfig";
 import { useAuth } from "@/src/providers/AuthProvider";
+import { getUserProfile, type UserProfile } from "@/src/services/user.service";
 
 export default function SharedWalletScreen() {
   const router = useRouter();
@@ -82,8 +83,42 @@ export default function SharedWalletScreen() {
     () => (wallet?.ownerUid ? allUsers[wallet.ownerUid] : undefined),
     [allUsers, wallet?.ownerUid]
   );
+  const [ownerProfileFallback, setOwnerProfileFallback] = useState<UserProfile | null>(null);
+
+  useEffect(() => {
+    const ownerUid = wallet?.ownerUid;
+    if (!ownerUid) {
+      setOwnerProfileFallback(null);
+      return;
+    }
+
+    const alreadyHaveLabel = Boolean(ownerProfile?.name?.trim() || ownerProfile?.email?.trim());
+    if (alreadyHaveLabel) {
+      setOwnerProfileFallback(null);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      const profile = await getUserProfile(ownerUid);
+      if (cancelled) return;
+      setOwnerProfileFallback(profile);
+    })().catch(() => {
+      if (!cancelled) setOwnerProfileFallback(null);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ownerProfile?.email, ownerProfile?.name, wallet?.ownerUid]);
   const walletState = String(wallet?.state ?? "active").toLowerCase();
-  const ownerLabel = ownerProfile?.name?.trim() || ownerProfile?.email?.trim() || wallet?.ownerUid || "—";
+  const ownerLabel =
+    ownerProfile?.name?.trim() ||
+    ownerProfileFallback?.name?.trim() ||
+    ownerProfile?.email?.trim() ||
+    ownerProfileFallback?.email?.trim() ||
+    wallet?.ownerUid ||
+    "—";
 
   const cardCurrencies = useMemo(
     () =>

@@ -2,6 +2,7 @@ import React from "react";
 
 import { View } from "react-native";
 
+import { useUserLabel } from "@/hooks/use-user-label";
 import { SharedCard } from "@/src/features/card/SharedCard";
 
 import { styles } from "../styles";
@@ -19,7 +20,9 @@ export const WalletCardItem = React.memo(function WalletCardItem({
 }: WalletCardItemProps) {
   const type = String(card.wallet?.type ?? "real");
   const memberUids = type === "shared" ? Object.keys(card.wallet?.members ?? {}) : undefined;
-  const ownerLabel = type === "shared" ? card.wallet?.ownerUid : undefined;
+  const ownerUid = type === "shared" ? card.wallet?.ownerUid : null;
+  const ownerLabelResolved = useUserLabel(ownerUid);
+  const ownerLabel = type === "shared" ? ownerLabelResolved : undefined;
 
   return (
     <View style={[styles.cardWrap, selected ? styles.cardSelected : null]}>

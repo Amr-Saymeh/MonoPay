@@ -1,4 +1,8 @@
-import { BottomSheetBackdrop, BottomSheetModal, BottomSheetView } from "@gorhom/bottom-sheet";
+import {
+  BottomSheetBackdrop,
+  BottomSheetModal,
+  BottomSheetView,
+} from "@gorhom/bottom-sheet";
 import { MaterialIcons } from "@expo/vector-icons";
 import React, { type RefObject, useMemo } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
@@ -45,16 +49,27 @@ export function FeedbackBottomSheet({
       bottomInset={bottomInset}
       enablePanDownToClose
       onDismiss={onDismiss}
-      handleIndicatorStyle={[styles.sheetHandle, { backgroundColor: sheetHandle }]}
+      handleIndicatorStyle={[
+        styles.sheetHandle,
+        { backgroundColor: sheetHandle },
+      ]}
       backgroundStyle={[styles.sheetBackground, { backgroundColor: sheetBg }]}
       backdropComponent={(props) => (
-        <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} />
+        <BottomSheetBackdrop
+          {...props}
+          appearsOnIndex={0}
+          disappearsOnIndex={-1}
+        />
       )}
     >
       <BottomSheetView style={styles.sheetContent}>
         <View style={styles.titleRow}>
-          {titleIcon ? <MaterialIcons name={titleIcon} size={22} color={sheetTitle} /> : null}
-          <ThemedText style={[styles.sheetTitle, { color: sheetTitle }]}>{title}</ThemedText>
+          {titleIcon ? (
+            <MaterialIcons name={titleIcon} size={22} color={sheetTitle} />
+          ) : null}
+          <ThemedText style={[styles.sheetTitle, { color: sheetTitle }]}>
+            {title}
+          </ThemedText>
         </View>
         <ThemedText style={[styles.sheetDescription, { color: sheetText }]}>
           {description}
@@ -69,7 +84,9 @@ export function FeedbackBottomSheet({
           >
             <View style={styles.primaryRow}>
               <MaterialIcons name={actionIcon} size={16} color="#FFFFFF" />
-              <ThemedText style={styles.primaryBtnText}>{actionLabel}</ThemedText>
+              <ThemedText style={styles.primaryBtnText}>
+                {actionLabel}
+              </ThemedText>
             </View>
           </Pressable>
         </View>
@@ -114,6 +131,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 12,
     backgroundColor: "#7C3AED",
+    marginBottom: 64,
   },
   primaryBtnText: {
     fontSize: 14,

@@ -1,11 +1,10 @@
-// components/goals/ProgressBar.tsx
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
-interface ProgressBarProps {
+type ProgressBarProps = {
   progress: number; // 0 to 1
   color?: string;
-}
+};
 
 export const ProgressBar = ({ progress, color = '#FFFFFF' }: ProgressBarProps) => {
   const clampedProgress = Math.min(Math.max(progress, 0), 1);
@@ -55,3 +54,4 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
 });
+

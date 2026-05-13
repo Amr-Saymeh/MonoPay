@@ -1,0 +1,133 @@
+import { Fonts } from "@/constants/theme";
+import { StyleSheet } from "react-native";
+
+export const styles = StyleSheet.create({
+  safeArea: { flex: 1 },
+  animatedPage: { flex: 1 },
+  container: { flex: 1 },
+  headerSection: {
+    borderBottomWidth: 1,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    height: 56,
+  },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  backButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+  },
+  backButtonLight: {
+    backgroundColor: "rgba(124,58,237,0.07)",
+    borderColor: "rgba(124,58,237,0.25)",
+  },
+  backButtonDark: {
+    backgroundColor: "rgba(124,58,237,0.15)",
+    borderColor: "rgba(196,181,253,0.3)",
+  },
+  headerTitle: { fontSize: 24, fontWeight: "700", fontFamily: Fonts.sansBlack },
+  scroll: { flex: 1 },
+  scrollContent: { paddingHorizontal: 16, paddingBottom: 32 },
+
+  previewCard: {
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 24,
+    marginTop: 8,
+    gap: 4,
+    shadowColor: "#7C3AED",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 6,
+    overflow: "hidden",
+  },
+  previewTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#FFF",
+    marginTop: 6,
+  },
+  previewSub: { fontSize: 13, color: "rgba(255,255,255,0.65)" },
+  previewAmount: { fontSize: 28, fontWeight: "800", color: "#FFF" },
+  previewDate: { fontSize: 13, color: "rgba(255,255,255,0.65)", marginTop: 2 },
+  previewCircleTop: {
+    position: "absolute",
+    top: -52,
+    right: -46,
+    width: 118,
+    height: 118,
+    borderRadius: 59,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+    backgroundColor: "rgba(255,255,255,0.11)",
+  },
+  previewCircleBottom: {
+    position: "absolute",
+    bottom: -58,
+    left: -50,
+    width: 122,
+    height: 122,
+    borderRadius: 61,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.14)",
+    backgroundColor: "rgba(255,255,255,0.08)",
+  },
+
+  label: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 8,
+    marginTop: 18,
+    opacity: 0.9,
+  },
+  input: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    fontSize: 17,
+  },
+  inputError: { borderColor: "#EF4444" },
+  errorText: { fontSize: 12, color: "#EF4444", marginTop: 4 },
+  dateRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  datePickerCard: {
+    marginTop: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  datePicker: {
+    width: "100%",
+  },
+
+  pillRow: { flexDirection: "row", gap: 10, marginTop: 4 },
+  pill: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: "center",
+  },
+  pillSelected: { backgroundColor: "#7C3AED", borderColor: "#7C3AED" },
+  pillText: { fontSize: 15, fontWeight: "600" },
+  pillTextSelected: { color: "#FFFFFF" },
+
+  footer: { padding: 16, paddingBottom: 8 },
+});

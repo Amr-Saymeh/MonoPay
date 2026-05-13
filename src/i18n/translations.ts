@@ -354,6 +354,7 @@ type TranslationKey =
   | "incomeSavings.deleteTitle"
   | "incomeSavings.deletePrompt"
   | "incomeSavings.deletePromptGeneric"
+  | "incomeSavings.deletedDescription"
   | "incomeSavings.noWalletsTitle"
   | "incomeSavings.noWalletsDescription"
   | "incomeSavings.selectWalletTitle"
@@ -391,6 +392,7 @@ type TranslationKey =
   | "common.delete"
   | "common.edit"
   | "common.add"
+  | "common.all"
   | "common.close"
   | "common.confirm"
   | "common.loading";
@@ -756,6 +758,7 @@ export const translations: Record<
     "incomeSavings.deleteTitle": "Delete income source",
     "incomeSavings.deletePrompt": "Delete {{type}} source from {{wallet}}?",
     "incomeSavings.deletePromptGeneric": "Delete this income source?",
+    "incomeSavings.deletedDescription": "The income source was removed successfully.",
     "incomeSavings.noWalletsTitle": "No Wallets",
     "incomeSavings.noWalletsDescription": "Create a wallet first before adding a regular income source.",
     "incomeSavings.selectWalletTitle": "Select Wallet",
@@ -792,6 +795,7 @@ export const translations: Record<
     "common.delete": "Delete",
     "common.edit": "Edit",
     "common.add": "Add",
+    "common.all": "All",
     "common.close": "Close",
     "common.confirm": "Confirm",
     "common.loading": "Loading...",
@@ -1152,6 +1156,7 @@ export const translations: Record<
     "incomeSavings.deleteTitle": "حذف مصدر الدخل",
     "incomeSavings.deletePrompt": "حذف مصدر {{type}} من {{wallet}}؟",
     "incomeSavings.deletePromptGeneric": "حذف مصدر الدخل هذا؟",
+    "incomeSavings.deletedDescription": "تمت إزالة مصدر الدخل بنجاح.",
     "incomeSavings.noWalletsTitle": "لا توجد محافظ",
     "incomeSavings.noWalletsDescription": "أنشئ محفظة أولًا قبل إضافة مصدر دخل منتظم.",
     "incomeSavings.selectWalletTitle": "اختر محفظة",
@@ -1188,6 +1193,7 @@ export const translations: Record<
     "common.delete": "حذف",
     "common.edit": "تعديل",
     "common.add": "إضافة",
+    "common.all": "الكل",
     "common.close": "إغلاق",
     "common.confirm": "تأكيد",
     "common.loading": "جارٍ التحميل...",

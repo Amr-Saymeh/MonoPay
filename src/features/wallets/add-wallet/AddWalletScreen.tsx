@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 
 import { useRouter } from "expo-router";
-import { get, ref, update } from "firebase/database";
 import { Alert, Pressable, ScrollView } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
@@ -9,23 +8,23 @@ import { ThemedView } from "@/components/themed-view";
 import { AuthInput } from "@/components/ui/auth-input";
 import { GradientButton } from "@/components/ui/gradient-button";
 import { useI18n } from "@/hooks/use-i18n";
-import { db } from "@/src/firebaseConfig";
 import { useAuth } from "@/src/providers/AuthProvider";
+import { getUserLabel } from "@/src/utils/userLabel";
 
 import { EmojiSelector } from "./components/EmojiSelector";
 import { InitialBalancesSection } from "./components/InitialBalancesSection";
 import { SharedMembersSection } from "./components/SharedMembersSection";
 import { WalletPreview } from "./components/WalletPreview";
 import { WalletTypeSelector } from "./components/WalletTypeSelector";
+import { createWalletInDb } from "./createWalletInDb";
 import { useSharedMembers } from "./hooks/useSharedMembers";
 import { styles } from "./styles";
-import type { BalanceRow, UserWalletLink, WalletRecord, WalletType } from "./types";
+import type { BalanceRow, WalletType } from "./types";
 import {
   EMOJI_OPTIONS,
   TYPE_OPTIONS,
   buildPreviewCurrencies,
   getDefaultColor,
-  getNextUserWalletKey,
   isValidExpiry,
   nextCurrency,
   parseAmount,
@@ -36,12 +35,16 @@ export default function AddWalletScreen() {
   const { t } = useI18n();
   const { user } = useAuth();
 
-  const [name, setName] = useState("");
-  const [type, setType] = useState<WalletType>("real");
-  const [emoji, setEmoji] = useState(EMOJI_OPTIONS[0]);
-  const [expiryDate, setExpiryDate] = useState("");
-  const [balances, setBalances] = useState<BalanceRow[]>([{ id: "0", currency: "nis", amount: "" }]);
-  const [saving, setSaving] = useState(false);
+  const [walletName, setWalletName] = useState("");
+  const [walletType, setWalletType] = useState<WalletType>("real");
+  const [walletEmoji, setWalletEmoji] = useState(EMOJI_OPTIONS[0]);
+  const [creditExpiry, setCreditExpiry] = useState("");
+  const [startingBalances, setStartingBalances] = useState<BalanceRow[]>([
+    { id: "0", currency: "nis", amount: "" },
+  ]);
+
+  const isSharedWallet = walletType === "shared";
+  const isCreditWallet = walletType === "credit";
 
   const {
     allUsers,
@@ -51,77 +54,87 @@ export default function AddWalletScreen() {
     setSelectedMemberUids,
     sharedSuggestions,
   } = useSharedMembers({
-    enabled: type === "shared",
+    enabled: isSharedWallet,
     currentUserId: user?.uid,
   });
 
-  const color = getDefaultColor(type);
-  const previewCurrencies = buildPreviewCurrencies(balances);
-  const previewMemberUids =
-    type !== "shared" || !user
-      ? undefined
-      : Array.from(new Set([user.uid, ...selectedMemberUids.filter(Boolean)]));
-  const previewOwnerLabel =
-    type !== "shared" || !user ? undefined : allUsers[user.uid]?.name?.trim() || user.uid;
-  const canCreate = name.trim().length > 0 && Boolean(user);
+  if (!user) {
+    return (
+      <ThemedView style={styles.screen}>
+        <ThemedText type="subtitle">{t("pleaseSignIn")}</ThemedText>
+      </ThemedView>
+    );
+  }
+
+  const currentUserId = user.uid;
+
+  const walletColor = getDefaultColor(walletType);
+  const previewCurrencies = buildPreviewCurrencies(startingBalances);
+  const previewMemberUids = isSharedWallet
+    ? Array.from(new Set([currentUserId, ...selectedMemberUids.filter(Boolean)]))
+    : undefined;
+  const previewOwnerLabel = isSharedWallet
+    ? getUserLabel(allUsers[currentUserId], currentUserId)
+    : undefined;
+  const canCreate = walletName.trim().length > 0;
+
+  const walletTypeText: Record<WalletType, string> = {
+    real: t("walletTypeReal"),
+    credit: t("walletTypeCredit"),
+    shared: t("walletTypeShared"),
+  };
 
   const walletTypeOptions = TYPE_OPTIONS.map((option) => ({
     ...option,
-    label:
-      option.key === "real"
-        ? t("walletTypeReal")
-        : option.key === "credit"
-          ? t("walletTypeCredit")
-          : t("walletTypeShared"),
+    label: walletTypeText[option.key],
   }));
 
-  const handleAddBalance = () => {
-    setBalances((current) => [
+  function addBalanceRow() {
+    setStartingBalances((current) => [
       ...current,
       { id: String(Date.now()), currency: "usd", amount: "" },
     ]);
-  };
+  }
 
-  const handleCycleCurrency = (rowId: string) => {
-    setBalances((current) =>
+  function cycleBalanceCurrency(rowId: string) {
+    setStartingBalances((current) =>
       current.map((row) =>
         row.id === rowId ? { ...row, currency: nextCurrency(row.currency) } : row,
       ),
     );
-  };
+  }
 
-  const handleAmountChange = (rowId: string, text: string) => {
-    setBalances((current) =>
+  function updateBalanceAmount(rowId: string, text: string) {
+    setStartingBalances((current) =>
       current.map((row) => (row.id === rowId ? { ...row, amount: text } : row)),
     );
-  };
+  }
 
-  const handleAddMember = (uid: string) => {
+  function addSharedMember(uid: string) {
     setSelectedMemberUids((current) => [...current, uid]);
     setSharedSearch("");
-  };
+  }
 
-  const handleRemoveMember = (uid: string) => {
+  function removeSharedMember(uid: string) {
     setSelectedMemberUids((current) => current.filter((item) => item !== uid));
-  };
+  }
 
-  const createWallet = async () => {
-    if (!user) return;
-
-    const walletName = name.trim();
-    if (walletName.length === 0) {
+  async function createWallet() {
+    const trimmedName = walletName.trim();
+    if (trimmedName.length === 0) {
       Alert.alert(t("error"), t("walletNameRequired"));
       return;
     }
 
-    if (type === "credit" && !isValidExpiry(expiryDate)) {
+    if (isCreditWallet && !isValidExpiry(creditExpiry)) {
       Alert.alert(t("error"), t("invalidExpiry"));
       return;
     }
 
+    // DB schema uses `currancies` (legacy spelling).
     const currancies: Record<string, number> = {};
 
-    for (const row of balances) {
+    for (const row of startingBalances) {
       const code = row.currency.trim().toLowerCase();
       const rawAmount = row.amount.trim();
 
@@ -142,97 +155,17 @@ export default function AddWalletScreen() {
       currancies[code] = amount;
     }
 
-    setSaving(true);
-    let created = false;
-
-    try {
-      const walletsSnapshot = await get(ref(db, "wallets"));
-      const wallets = (walletsSnapshot.val() ?? {}) as Record<string, WalletRecord>;
-
-      const maxWalletId = Object.values(wallets).reduce((accumulator, wallet) => {
-        const value = Number(wallet?.id);
-        return Number.isFinite(value) ? Math.max(accumulator, value) : accumulator;
-      }, 0);
-
-      const newWalletId = maxWalletId + 1;
-      const walletKey = `wallet${newWalletId}`;
-
-      const userWalletsSnapshot = await get(ref(db, `users/${user.uid}/userwallet`));
-      const userWallets = (userWalletsSnapshot.val() ?? {}) as Record<string, UserWalletLink>;
-      const userWalletKey = getNextUserWalletKey(userWallets);
-
-      const sharedMembers =
-        type === "shared"
-          ? Array.from(new Set([user.uid, ...selectedMemberUids.filter(Boolean)]))
-          : [];
-
-      const sharedMembersMap =
-        type === "shared"
-          ? sharedMembers.reduce((accumulator, uid) => {
-              accumulator[uid] = true;
-              return accumulator;
-            }, {} as Record<string, true>)
-          : undefined;
-
-      const updates: Record<string, unknown> = {
-        [`wallets/${walletKey}`]: {
-          currancies,
-          id: newWalletId,
-          state: "active",
-          type,
-          ...(type === "credit" ? { expiryDate: expiryDate.trim() || undefined } : {}),
-          ...(type === "shared" ? { ownerUid: user.uid, members: sharedMembersMap } : {}),
-        },
-        [`users/${user.uid}/userwallet/${userWalletKey}`]: {
-          name: walletName,
-          walletid: newWalletId,
-          color,
-          emoji,
-        },
-      };
-
-      if (type === "shared") {
-        for (const uid of sharedMembers) {
-          if (uid === user.uid) continue;
-
-          const memberWalletsSnapshot = await get(ref(db, `users/${uid}/userwallet`));
-          const memberWallets = (memberWalletsSnapshot.val() ?? {}) as Record<string, unknown>;
-          const alreadyLinked = Object.values(memberWallets).some(
-            (wallet: any) => Number(wallet?.walletid) === newWalletId,
-          );
-
-          if (!alreadyLinked) {
-            const nextKey = getNextUserWalletKey(memberWallets);
-            updates[`users/${uid}/userwallet/${nextKey}`] = {
-              name: walletName,
-              walletid: newWalletId,
-              color,
-              emoji,
-            };
-          }
-        }
-      }
-
-      await update(ref(db), updates);
-      created = true;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      Alert.alert(t("error"), message);
-    } finally {
-      setSaving(false);
-    }
-
-    if (created) {
-      router.back();
-    }
-  };
-
-  if (!user) {
-    return (
-      <ThemedView style={styles.screen}>
-        <ThemedText type="subtitle">{t("pleaseSignIn")}</ThemedText>
-      </ThemedView>
-    );
+    await createWalletInDb({
+      currentUserId,
+      walletName: trimmedName,
+      type: walletType,
+      expiryDate: creditExpiry,
+      emoji: walletEmoji,
+      color: walletColor,
+      currancies,
+      selectedMemberUids,
+    });
+    router.back();
   }
 
   return (
@@ -243,8 +176,8 @@ export default function AddWalletScreen() {
         </ThemedText>
 
         <WalletPreview
-          name={name.trim() || t("walletName")}
-          emoji={emoji}
+          name={walletName.trim() || t("walletName")}
+          emoji={walletEmoji}
           currencies={previewCurrencies}
           ownerLabel={previewOwnerLabel}
           memberUids={previewMemberUids}
@@ -253,8 +186,8 @@ export default function AddWalletScreen() {
         <ThemedView style={styles.section}>
           <ThemedText style={styles.sectionTitle}>{t("walletName")}</ThemedText>
           <AuthInput
-            value={name}
-            onChangeText={setName}
+            value={walletName}
+            onChangeText={setWalletName}
             placeholder={t("walletNamePlaceholder")}
             autoCapitalize="words"
           />
@@ -264,17 +197,17 @@ export default function AddWalletScreen() {
           <ThemedText style={styles.sectionTitle}>{t("walletType")}</ThemedText>
           <WalletTypeSelector
             options={walletTypeOptions}
-            selectedType={type}
-            onSelect={setType}
+            selectedType={walletType}
+            onSelect={setWalletType}
           />
         </ThemedView>
 
-        {type === "credit" ? (
+        {isCreditWallet ? (
           <ThemedView style={styles.section}>
             <ThemedText style={styles.sectionTitle}>{t("walletExpiry")} (MM/YY)</ThemedText>
             <AuthInput
-              value={expiryDate}
-              onChangeText={setExpiryDate}
+              value={creditExpiry}
+              onChangeText={setCreditExpiry}
               placeholder="12/30"
               keyboardType="numeric"
               autoCapitalize="none"
@@ -282,7 +215,7 @@ export default function AddWalletScreen() {
           </ThemedView>
         ) : null}
 
-        {type === "shared" ? (
+        {isSharedWallet ? (
           <SharedMembersSection
             title={t("addMembers")}
             placeholder={t("searchByNameOrNumber")}
@@ -291,33 +224,32 @@ export default function AddWalletScreen() {
             allUsers={allUsers}
             suggestions={sharedSuggestions}
             onSearchChange={setSharedSearch}
-            onRemoveMember={handleRemoveMember}
-            onAddMember={handleAddMember}
+            onRemoveMember={removeSharedMember}
+            onAddMember={addSharedMember}
           />
         ) : null}
 
         <InitialBalancesSection
           title={t("initialBalances")}
-          balances={balances}
-          onAddBalance={handleAddBalance}
-          onCycleCurrency={handleCycleCurrency}
-          onAmountChange={handleAmountChange}
+          balances={startingBalances}
+          onAddBalance={addBalanceRow}
+          onCycleCurrency={cycleBalanceCurrency}
+          onAmountChange={updateBalanceAmount}
         />
 
         <ThemedView style={styles.section}>
           <ThemedText style={styles.sectionTitle}>{t("chooseEmoji")}</ThemedText>
           <EmojiSelector
             options={EMOJI_OPTIONS}
-            selectedEmoji={emoji}
-            onSelect={setEmoji}
+            selectedEmoji={walletEmoji}
+            onSelect={setWalletEmoji}
           />
         </ThemedView>
 
         <GradientButton
-          label={saving ? t("creating") : t("createWallet")}
+          label={t("createWallet")}
           onPress={createWallet}
           disabled={!canCreate}
-          loading={saving}
           style={{ marginTop: 10 }}
         />
 

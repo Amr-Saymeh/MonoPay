@@ -7,13 +7,13 @@ import { useI18n } from "@/hooks/use-i18n";
 import type { IncomeSource } from "@/src/services/incomeSources.service";
 import { hapticWarning } from "@/src/utils/haptics";
 
-interface EntryCardProps {
+type EntryCardProps = {
   item: IncomeSource;
   cardBg: string;
   cardBorder: string;
   regularityTextColor: string;
   onDelete: (item: IncomeSource) => void;
-}
+};
 
 export function EntryCard({ item, cardBg, cardBorder, regularityTextColor, onDelete }: EntryCardProps) {
   const { t } = useI18n();
