@@ -7,6 +7,7 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useI18n } from "@/hooks/use-i18n";
 
+import { useUserLabel } from "@/hooks/use-user-label";
 import { styles } from "../styles";
 import type { WalletCard } from "../types";
 import { formatCurrency } from "../utils";
@@ -29,6 +30,8 @@ export function WalletDetailsCard({
   onManageShared,
 }: WalletDetailsCardProps) {
   const { t } = useI18n();
+  const ownerUid = String(selected?.wallet?.type ?? "") === "shared" ? selected?.wallet?.ownerUid : null;
+  const resolvedOwnerLabel = useUserLabel(ownerUid);
 
   return (
     <ThemedView style={styles.detailsCard}>
@@ -90,7 +93,7 @@ export function WalletDetailsCard({
           <View style={styles.detailRow}>
             <ThemedText style={styles.detailLabel}>{t("walletOwner")}</ThemedText>
             <ThemedText type="defaultSemiBold" style={styles.detailValue}>
-              {selected?.wallet?.ownerUid ?? "—"}
+              {resolvedOwnerLabel}
             </ThemedText>
           </View>
 

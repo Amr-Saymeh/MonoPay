@@ -44,18 +44,24 @@ export default function MyWalletsScreen() {
     userWallets,
   } = useWalletCards({ userId: user?.uid });
 
-  let selectedTypeLabel = "—";
-  const walletType = String(selected?.wallet?.type ?? "").toLowerCase();
-  if (walletType === "real") selectedTypeLabel = t("walletTypeReal");
-  else if (walletType === "credit") selectedTypeLabel = t("walletTypeCredit");
-  else if (walletType === "shared") selectedTypeLabel = t("walletTypeShared");
-  else if (selected?.wallet?.type) selectedTypeLabel = String(selected.wallet.type);
+  const typeLabels: Record<string, string> = {
+    real: t("walletTypeReal"),
+    credit: t("walletTypeCredit"),
+    shared: t("walletTypeShared"),
+  };
 
-  let selectedStatusLabel = "—";
-  const walletState = String(selected?.wallet?.state ?? "").toLowerCase();
-  if (walletState === "active") selectedStatusLabel = t("active");
-  else if (walletState === "inactive") selectedStatusLabel = t("inactive");
-  else if (selected?.wallet?.state) selectedStatusLabel = String(selected.wallet.state);
+  const statusLabels: Record<string, string> = {
+    active: t("active"),
+    inactive: t("inactive"),
+  };
+
+  const walletTypeKey = String(selected?.wallet?.type ?? "").trim().toLowerCase();
+  const selectedTypeLabel =
+    typeLabels[walletTypeKey] ?? (selected?.wallet?.type ? String(selected.wallet.type) : "—");
+
+  const walletStateKey = String(selected?.wallet?.state ?? "").trim().toLowerCase();
+  const selectedStatusLabel =
+    statusLabels[walletStateKey] ?? (selected?.wallet?.state ? String(selected.wallet.state) : "—");
 
   const sideInset = Math.max(0, (screenWidth - CARD_WIDTH) / 2);
 

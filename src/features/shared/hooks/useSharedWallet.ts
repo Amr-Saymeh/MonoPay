@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
-import { onValue, ref } from "firebase/database";
 import { db } from "@/src/firebaseConfig";
+import { onValue, ref } from "firebase/database";
+import { useEffect, useState } from "react";
 import { WalletRecord } from "../types";
 
 interface UseSharedWalletResult {
@@ -24,6 +24,35 @@ export function useSharedWallet(
 
   useEffect(() => {
     if (!user || !Number.isFinite(walletId)) {
+      setName("");
+      return;
+    }
+
+    const unsub = onValue(
+      ref(db, `users/${user.uid}/userwallet`),
+      (snap) => {
+        const links = (snap.val() ?? {}) as Record<
+          string,
+          { walletid?: number; name?: string }
+        >;
+
+        const link = Object.values(links).find(
+          (item) => Number(item?.walletid) === walletId,
+        );
+
+        const label = link?.name?.trim();
+        setName(label && label.length > 0 ? label : `Wallet ${walletId}`);
+      },
+      () => {
+        setName(`Wallet ${walletId}`);
+      },
+    );
+
+    return () => unsub();
+  }, [user, walletId]);
+
+  useEffect(() => {
+    if (!user || !Number.isFinite(walletId)) {
       setLoading(false);
       return;
     }
@@ -38,7 +67,6 @@ export function useSharedWallet(
           return;
         }
         setWallet(value);
-        setName(`Wallet ${walletId}`);
         setGoal(value.goal ?? "");
         setMemberUids(Object.keys(value.members ?? {}));
         setLoading(false);
