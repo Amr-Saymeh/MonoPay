@@ -1,56 +1,79 @@
-import React, { useState } from "react";
+import { useNavigation } from "@react-navigation/native";
+import { useRouter } from "expo-router";
+import React, { useEffect } from "react";
+
+import { LayoutChangeEvent, ScrollView } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useI18n } from "@/hooks/use-i18n";
+import { InsightsLoading } from "@/src/features/insights/components/InsightsLoading";
+import {
+  ChartsSection,
+  ControlsSection,
+  HeroSection,
+  HighlightsSection,
+  InsightsGrid,
+  MetricsSection,
+} from "@/src/features/insights/components/InsightsSections";
+import { useInsightsScreenState } from "@/src/features/insights/hooks/useInsightsScreenState";
+import { useSpendingInsightsData } from "@/src/features/insights/hooks/useSpendingInsightsData";
+import { styles } from "@/src/features/insights/styles";
 import { useAuth } from "@/src/providers/AuthProvider";
-import {
-    ActivityIndicator,
-    LayoutChangeEvent,
-    ScrollView,
-    Text,
-    View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-
-import {
-    ChartsSection,
-    ControlsSection,
-    HeroSection,
-    HighlightsSection,
-    InsightsGrid,
-    MetricsSection,
-} from "../components/InsightsSections";
-import { useSpendingInsightsData } from "../hooks/useSpendingInsightsData";
-import { styles } from "../styles";
-import { ChartView, FlowFilter, SortMode, TimeWindow } from "../utils/insights";
 
 export default function SpendingInsightsScreen() {
+  const navigation = useNavigation();
+  const router = useRouter();
   const scheme = useColorScheme() ?? "light";
   const { user, profile } = useAuth();
   const { t, language, isRtl } = useI18n();
   const colors = Colors[scheme];
 
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("beforeRemove", (event) => {
+      const actionType = event.data.action?.type;
+
+      if (actionType !== "GO_BACK" && actionType !== "POP" && actionType !== "POP_TO_TOP") {
+        return;
+      }
+
+      event.preventDefault();
+      router.replace("/(tabs)" as any);
+    });
+
+    return unsubscribe;
+  }, [navigation, router]);
+
+  const {
+    category,
+    chart,
+    chartWidth,
+    currency,
+    flow,
+    setCategory,
+    setChart,
+    setChartWidth,
+    setCurrency,
+    setFlow,
+    setSortMode,
+    setWindow,
+    sortMode,
+    window,
+  } = useInsightsScreenState();
+
   const palette = {
     bg: colors.background,
+    blue: "#38BDF8",
     card: scheme === "dark" ? "#12171E" : "#FFFFFF",
     border: colors.border,
-    muted: scheme === "dark" ? "rgba(236,237,238,0.65)" : "rgba(17,24,28,0.55)",
-    purple: "#A855F7",
-    green: "#22C55E",
-    orange: "#F97316",
-    blue: "#38BDF8",
     colorsText: colors.text,
+    green: "#22C55E",
+    muted: scheme === "dark" ? "rgba(236,237,238,0.65)" : "rgba(17,24,28,0.55)",
+    orange: "#F97316",
+    purple: "#A855F7",
     scheme,
   } as const;
-
-  const [window, setWindow] = useState<TimeWindow>("30D");
-  const [flow, setFlow] = useState<FlowFilter>("all");
-  const [currency, setCurrency] = useState("ALL");
-  const [category, setCategory] = useState("ALL");
-  const [chart, setChart] = useState<ChartView>("trend");
-  const [sortMode, setSortMode] = useState<SortMode>("recent");
-  const [chartWidth, setChartWidth] = useState(0);
 
   const {
     avg,
@@ -83,28 +106,21 @@ export default function SpendingInsightsScreen() {
     window,
   });
 
-  const primaryCurrency =
-    currency !== "ALL" ? currency : (currencies[0] ?? "USD");
+  const primaryCurrency = currency !== "ALL" ? currency : (currencies[0] ?? "USD");
 
   if (!loaded) {
     return (
-      <SafeAreaView style={[styles.screen, { backgroundColor: palette.bg }]}>
-        <View style={styles.loading}>
-          <ActivityIndicator size="large" color={palette.purple} />
-          <Text style={[styles.loadingText, { color: palette.muted }]}>
-            Preparing your insights…
-          </Text>
-        </View>
-      </SafeAreaView>
+      <InsightsLoading
+        backgroundColor={palette.bg}
+        loadingColor={palette.purple}
+        mutedColor={palette.muted}
+      />
     );
   }
 
   return (
-    <SafeAreaView style={[styles.screen, { backgroundColor: palette.bg }]}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.content}
-      >
+    <SafeAreaView style={[styles.screen, { backgroundColor: palette.bg }]}> 
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         <HeroSection
           avg={avg}
           filteredLength={filtered.length}
@@ -158,13 +174,9 @@ export default function SpendingInsightsScreen() {
           maxTrend={maxTrend}
           maxWeekdayValue={maxWeekdayValue}
           muted={palette.muted}
-          onChartLayout={(event: LayoutChangeEvent) =>
-            setChartWidth(event.nativeEvent.layout.width)
-          }
+          onChartLayout={(event: LayoutChangeEvent) => setChartWidth(event.nativeEvent.layout.width)}
           orange={palette.orange}
           primaryCurrency={primaryCurrency}
-          setChart={setChart}
-          spendTotal={spendTotal}
           topAmountBase={categoryBaseTotal}
           trend={trend}
           weekday={weekday}
@@ -180,7 +192,6 @@ export default function SpendingInsightsScreen() {
           largestEntry={largestEntry}
           muted={palette.muted}
           palette={palette}
-          primaryCurrency={primaryCurrency}
           top={top}
         />
 

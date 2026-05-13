@@ -7,14 +7,6 @@ type UploadImageOptions = {
   fileName: string;
 };
 
-function getCloudName() {
-  return process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME;
-}
-
-function getUploadPreset() {
-  return process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
-}
-
 export async function uploadImageToCloudinary({
   uri,
   folder,

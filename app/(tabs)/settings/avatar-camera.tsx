@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { Image } from "expo-image";
@@ -25,22 +25,18 @@ export default function AvatarCameraScreen() {
   const { t } = useI18n();
   const router = useRouter();
   const { user, profile } = useAuth();
-
   const surface = useThemeColor({}, "surface");
   const border = useThemeColor({}, "border");
-  const surfacePressed = useThemeColor({}, "surfacePressed");
 
   const cameraRef = useRef<CameraView | null>(null);
   const [permission, requestPermission] = useCameraPermissions();
-
   const [capturing, setCapturing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
 
-  const hasPermission = permission?.granted;
-
   const onCapture = async () => {
     if (!cameraRef.current) return;
+
     setCapturing(true);
     try {
       const photo = await cameraRef.current.takePictureAsync({
@@ -55,11 +51,6 @@ export default function AvatarCameraScreen() {
     }
   };
 
-  const canUse = useMemo(
-    () => typeof photoUri === "string" && photoUri.length > 0,
-    [photoUri],
-  );
-
   const onUse = async () => {
     if (!user || !photoUri) return;
 
@@ -72,39 +63,29 @@ export default function AvatarCameraScreen() {
         fileName: `${user.uid}-avatar-${stamp}`,
       });
 
-      await updateUserProfile(user.uid, {
-        personalImage: url,
-      });
-
+      await updateUserProfile(user.uid, { personalImage: url });
       router.back();
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : t("uploadFailed");
-      Alert.alert(t("error"), msg);
+    } catch (error) {
+      Alert.alert(t("error"), error instanceof Error ? error.message : t("uploadFailed"));
     } finally {
       setSaving(false);
     }
   };
 
-  if (!permission) return null;
+  if (!permission) {
+    return null;
+  }
 
-  if (!hasPermission) {
+  if (!permission.granted) {
     return (
       <ThemedView style={styles.permission}>
         <Animated.View
           entering={FadeInDown.duration(450)}
-          style={[
-            styles.permissionCard,
-            { borderColor: border, backgroundColor: surface },
-          ]}
+          style={[styles.permissionCard, { borderColor: border, backgroundColor: surface }]}
         >
           <ThemedText type="subtitle">{t("takeSelfie")}</ThemedText>
-          <ThemedText style={styles.permissionText}>
-            {t("cameraPermissionNeeded")}
-          </ThemedText>
-          <GradientButton
-            label={t("continue")}
-            onPress={() => void requestPermission()}
-          />
+          <ThemedText style={styles.permissionText}>{t("cameraPermissionNeeded")}</ThemedText>
+          <GradientButton label={t("continue")} onPress={() => void requestPermission()} />
         </Animated.View>
       </ThemedView>
     );
@@ -123,20 +104,13 @@ export default function AvatarCameraScreen() {
 
       <View style={styles.cameraWrap}>
         {photoUri ? (
-          <Animated.View
-            entering={FadeIn.duration(250)}
-            style={styles.previewWrap}
-          >
-            <Image
-              source={{ uri: photoUri }}
-              style={styles.preview}
-              contentFit="cover"
-            />
+          <Animated.View entering={FadeIn.duration(250)} style={styles.previewWrap}>
+            <Image source={{ uri: photoUri }} style={styles.preview} contentFit="cover" />
           </Animated.View>
         ) : (
           <CameraView
-            ref={(r) => {
-              cameraRef.current = r;
+            ref={(value) => {
+              cameraRef.current = value;
             }}
             style={styles.camera}
             facing="front"
@@ -159,19 +133,16 @@ export default function AvatarCameraScreen() {
             </Pressable>
             <GradientButton
               label={t("usePhoto")}
-              onPress={onUse}
-              disabled={!canUse}
+              onPress={() => void onUse()}
+              disabled={!photoUri}
               loading={saving}
               style={{ flex: 1 }}
             />
           </View>
         ) : (
           <Pressable
-            onPress={onCapture}
-            style={({ pressed }) => [
-              styles.capture,
-              pressed ? styles.pressed : null,
-            ]}
+            onPress={() => void onCapture()}
+            style={({ pressed }) => [styles.capture, pressed ? styles.pressed : null]}
           >
             {capturing ? (
               <ActivityIndicator color="#fff" />

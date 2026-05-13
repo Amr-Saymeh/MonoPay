@@ -4,8 +4,8 @@ import { Stack } from "expo-router";
 
 import { ThemeToggleHeaderButton } from "@/components/theme-toggle";
 import { Fonts } from "@/constants/theme";
-import { useI18n } from "@/hooks/use-i18n";
 import { useThemeColor } from "@/hooks/use-theme-color";
+import { useI18n } from "../../../hooks/use-i18n";
 
 export default function SettingsLayout() {
   const { t } = useI18n();
@@ -30,6 +30,7 @@ export default function SettingsLayout() {
       }}
     >
       <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="category-suggestions" options={{ headerShown: false }} />
       <Stack.Screen name="edit-profile" options={{ title: t("editProfile") }} />
       <Stack.Screen
         name="change-password"

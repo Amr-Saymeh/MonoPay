@@ -1,10 +1,10 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 
 import { useRouter } from "expo-router";
 import {
-    EmailAuthProvider,
-    reauthenticateWithCredential,
-    updatePassword,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword,
 } from "firebase/auth";
 import { Alert, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -27,13 +27,10 @@ export default function ChangePasswordScreen() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const canSave = useMemo(() => {
-    return (
-      currentPassword.trim().length >= 6 &&
-      newPassword.trim().length >= 6 &&
-      newPassword === confirmPassword
-    );
-  }, [currentPassword, newPassword, confirmPassword]);
+  const canSave =
+    currentPassword.trim().length >= 6 &&
+    newPassword.trim().length >= 6 &&
+    newPassword === confirmPassword;
 
   const onChange = async () => {
     if (!user || !user.email || !auth.currentUser) {
@@ -43,26 +40,20 @@ export default function ChangePasswordScreen() {
 
     setSaving(true);
     try {
-      const cred = EmailAuthProvider.credential(user.email, currentPassword);
-      await reauthenticateWithCredential(auth.currentUser, cred);
+      const credential = EmailAuthProvider.credential(user.email, currentPassword);
+      await reauthenticateWithCredential(auth.currentUser, credential);
       await updatePassword(auth.currentUser, newPassword);
       Alert.alert(t("welcome"), t("saved"));
       router.back();
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : t("error");
-      Alert.alert(t("error"), msg);
+    } catch (error) {
+      Alert.alert(t("error"), error instanceof Error ? error.message : t("error"));
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <ThemedView
-      style={[
-        styles.screen,
-        { paddingBottom: Math.max(16, insets.bottom + 16) },
-      ]}
-    >
+    <ThemedView style={[styles.screen, { paddingBottom: Math.max(16, insets.bottom + 16) }]}>
       <AuthInput
         value={currentPassword}
         onChangeText={setCurrentPassword}
@@ -83,7 +74,7 @@ export default function ChangePasswordScreen() {
       />
       <GradientButton
         label={t("updatePassword")}
-        onPress={onChange}
+        onPress={() => void onChange()}
         disabled={!canSave}
         loading={saving}
       />

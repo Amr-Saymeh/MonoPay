@@ -26,7 +26,7 @@ export const menuItems: MenuItem[] = [
     iconName: "bar-chart-outline",
     color: "#9C27B0",
     state: false,
-    route: "/SpendingInsights",
+    route: "/spending-insights",
   },
   {
     id: "4",

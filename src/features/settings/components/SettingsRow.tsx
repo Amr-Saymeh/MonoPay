@@ -4,50 +4,51 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Pressable, Switch, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
-import { styles } from "../_styles";
+
+import { styles } from "../styles";
 
 type IconName = React.ComponentProps<typeof MaterialIcons>["name"];
 
 type SettingsRowProps = {
+  cardBg: string;
+  chevronColor: string;
   icon: IconName;
   iconBg: string;
   iconColor: string;
-  label: string;
-  value?: string;
   isRtl: boolean;
+  label: string;
   labelColor: string;
-  valueColor: string;
-  cardBg: string;
-  chevronColor: string;
-  type?: "link" | "toggle";
-  toggleValue?: boolean;
-  onToggle?: (val: boolean) => void;
   onPress?: () => void;
-  switchTrackOn: string;
-  switchTrackOff: string;
-  switchThumbOn: string;
+  onToggle?: (value: boolean) => void;
   switchThumbOff: string;
+  switchThumbOn: string;
+  switchTrackOff: string;
+  switchTrackOn: string;
+  toggleValue?: boolean;
+  type?: "link" | "toggle";
+  value?: string;
+  valueColor: string;
 };
 
 export function SettingsRow({
+  cardBg,
+  chevronColor,
   icon,
   iconBg,
   iconColor,
-  label,
-  value,
   isRtl,
+  label,
   labelColor,
-  valueColor,
-  cardBg,
-  chevronColor,
-  type = "link",
-  toggleValue,
-  onToggle,
   onPress,
-  switchTrackOn,
-  switchTrackOff,
-  switchThumbOn,
+  onToggle,
   switchThumbOff,
+  switchThumbOn,
+  switchTrackOff,
+  switchTrackOn,
+  toggleValue,
+  type = "link",
+  value,
+  valueColor,
 }: SettingsRowProps) {
   const isToggle = type === "toggle";
 
@@ -63,21 +64,13 @@ export function SettingsRow({
 
         <View style={[styles.rowContent, isRtl ? styles.rowContentRtl : null]}>
           <ThemedText
-            style={[
-              styles.rowLabel,
-              { color: labelColor },
-              isRtl ? styles.textRtl : null,
-            ]}
+            style={[styles.rowLabel, { color: labelColor }, isRtl ? styles.textRtl : null]}
           >
             {label}
           </ThemedText>
           {value ? (
             <ThemedText
-              style={[
-                styles.rowValue,
-                { color: valueColor },
-                isRtl ? styles.textRtl : null,
-              ]}
+              style={[styles.rowValue, { color: valueColor }, isRtl ? styles.textRtl : null]}
             >
               {value}
             </ThemedText>

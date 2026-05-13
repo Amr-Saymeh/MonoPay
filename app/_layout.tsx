@@ -21,7 +21,7 @@ import {
   useFonts,
 } from "@expo-google-fonts/tajawal";
 
-import { ActivityIndicator, Text, TextInput, View } from "react-native";
+import { Text, TextInput, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AuthProvider } from "@/src/providers/AuthProvider";
@@ -118,13 +118,6 @@ function RootLayoutInner() {
           <Stack.Screen name="index" />
           <Stack.Screen
             name="(auth)"
-            options={{
-              gestureEnabled: false,
-              fullScreenGestureEnabled: false,
-            }}
-          />
-          <Stack.Screen
-            name="category-suggestions"
             options={{
               gestureEnabled: false,
               fullScreenGestureEnabled: false,

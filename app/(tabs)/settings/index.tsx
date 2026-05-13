@@ -1,20 +1,21 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback } from "react";
 
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { Image } from "expo-image";
-import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { Alert, Pressable, ScrollView, View } from "react-native";
+import { Alert, ScrollView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useI18n } from "@/hooks/use-i18n";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { useThemeMode } from "@/src/providers/ThemeModeProvider";
-import { SettingsRow } from "./_components/SettingsRow";
-import { styles } from "./_styles";
+
+import { SettingsHeader } from "@/src/features/settings/components/SettingsHeader";
+import { SettingsLogoutButton } from "@/src/features/settings/components/SettingsLogoutButton";
+import { SettingsProfileCard } from "@/src/features/settings/components/SettingsProfileCard";
+import { SettingsRow } from "@/src/features/settings/components/SettingsRow";
+import { SettingsSection } from "@/src/features/settings/components/SettingsSection";
+import { styles } from "@/src/features/settings/styles";
 
 export default function SettingsScreen() {
   const { t, language, setLanguage, isRtl } = useI18n();
@@ -23,65 +24,78 @@ export default function SettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const isDark = colorScheme === "dark";
 
-  const screenBg = useThemeColor(
-    { light: "#F5F0FA", dark: "#0E1118" },
-    "background",
-  );
-  const textColor = useThemeColor({}, "text");
-  const mutedColor = useThemeColor(
-    { light: "rgba(0,0,0,0.5)", dark: "rgba(255,255,255,0.5)" },
-    "text",
-  );
-  const cardBg = useThemeColor(
-    { light: "#FFFFFF", dark: "#1C1F2A" },
-    "surface",
-  );
-  const sectionLabelColor = useThemeColor(
-    { light: "#1A1A2E", dark: "#E0E0E0" },
-    "text",
-  );
-  const chevronColor = useThemeColor(
-    { light: "#9B7DFF", dark: "#A78BFA" },
-    "tint",
-  );
-  const logoutColor = useThemeColor(
-    { light: "#7C3AED", dark: "#A78BFA" },
-    "tint",
-  );
-  const avatarPlaceholderBg = useThemeColor(
-    { light: "#EDE9FE", dark: "#374151" },
-    "surface",
-  );
-
-  const iconPurpleBg = useThemeColor(
-    { light: "#EDE9FE", dark: "rgba(139,92,246,0.2)" },
-    "surface",
-  );
-  const iconPurple = useThemeColor(
-    { light: "#7C3AED", dark: "#A78BFA" },
-    "tint",
-  );
-
-  const switchTrackOn = useThemeColor(
-    { light: "#7C3AED", dark: "#8B5CF6" },
-    "tint",
-  );
-  const switchTrackOff = useThemeColor(
-    { light: "#D1D5DB", dark: "#374151" },
-    "border",
-  );
-  const switchThumbOn = "#FFFFFF";
-  const switchThumbOff = "#FFFFFF";
+  const colors = {
+    screenBg: useThemeColor({ light: "#F5F0FA", dark: "#0E1118" }, "background"),
+    text: useThemeColor({}, "text"),
+    muted: useThemeColor({ light: "rgba(0,0,0,0.5)", dark: "rgba(255,255,255,0.5)" }, "text"),
+    card: useThemeColor({ light: "#FFFFFF", dark: "#1C1F2A" }, "surface"),
+    sectionLabel: useThemeColor({ light: "#1A1A2E", dark: "#E0E0E0" }, "text"),
+    chevron: useThemeColor({ light: "#9B7DFF", dark: "#A78BFA" }, "tint"),
+    logout: useThemeColor({ light: "#7C3AED", dark: "#A78BFA" }, "tint"),
+    avatarPlaceholder: useThemeColor({ light: "#EDE9FE", dark: "#374151" }, "surface"),
+    iconBg: useThemeColor({ light: "#EDE9FE", dark: "rgba(139,92,246,0.2)" }, "surface"),
+    icon: useThemeColor({ light: "#7C3AED", dark: "#A78BFA" }, "tint"),
+    switchTrackOn: useThemeColor({ light: "#7C3AED", dark: "#8B5CF6" }, "tint"),
+    switchTrackOff: useThemeColor({ light: "#D1D5DB", dark: "#374151" }, "border"),
+  };
 
   const avatarUri = profile?.personalImage;
   const userName = profile?.name ?? "User";
   const userEmail = user?.email ?? profile?.email ?? "";
   const bottomClearance = Math.max(160, insets.bottom + 64);
-
   const languageValue = language === "ar" ? "العربية" : "English (US)";
+
+  const sharedRowProps = {
+    cardBg: colors.card,
+    chevronColor: colors.chevron,
+    iconBg: colors.iconBg,
+    iconColor: colors.icon,
+    isRtl,
+    labelColor: colors.text,
+    switchThumbOff: "#FFFFFF",
+    switchThumbOn: "#FFFFFF",
+    switchTrackOff: colors.switchTrackOff,
+    switchTrackOn: colors.switchTrackOn,
+    valueColor: colors.muted,
+  };
+
+  const accountRows = [
+    {
+      icon: "credit-card" as const,
+      label: t("paymentMethods"),
+      onPress: () => router.push("/(tabs)/wallets" as any),
+      value: language === "ar" ? "3 بطاقات محفوظة" : "3 cards saved",
+    },
+    {
+      icon: "language" as const,
+      label: language === "ar" ? "اللغة" : "Language",
+      onPress: () => setLanguage(language === "ar" ? "en" : "ar"),
+      value: languageValue,
+    },
+    {
+      icon: "category" as const,
+      label: language === "ar" ? "الفئات" : "Categories",
+      onPress: () => router.push("/(tabs)/settings/category-suggestions" as any),
+      value: language === "ar" ? "إدارة الفئات" : "Manage categories",
+    },
+  ];
+
+  const preferenceRows = [
+    {
+      icon: "dark-mode" as const,
+      label: t("darkMode"),
+      onToggle: (value: boolean) => setMode(value ? "dark" : "light"),
+      toggleValue: isDark,
+      type: "toggle" as const,
+    },
+    {
+      icon: "shield" as const,
+      label: language === "ar" ? "الأمان والخصوصية" : "Security & Privacy",
+      onPress: () => router.push("/(tabs)/settings/change-password" as any),
+    },
+  ];
 
   const onLogout = useCallback(() => {
     Alert.alert(t("logoutConfirmTitle"), t("logoutConfirmMessage"), [
@@ -101,7 +115,7 @@ export default function SettingsScreen() {
   }, [router, signOut, t]);
 
   return (
-    <ThemedView style={[styles.screen, { backgroundColor: screenBg }]}>
+    <ThemedView style={[styles.screen, { backgroundColor: colors.screenBg }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
@@ -109,231 +123,44 @@ export default function SettingsScreen() {
           { paddingTop: insets.top + 8, paddingBottom: bottomClearance },
         ]}
       >
-        {/* Header */}
-        <View style={[styles.header, isRtl ? styles.headerRtl : null]}>
-          <Pressable
-            style={({ pressed }) => [
-              styles.backBtn,
-              { backgroundColor: iconPurpleBg },
-              pressed ? styles.backBtnPressed : null,
-            ]}
-            onPress={() => router.replace("/(tabs)" as any)}
-            accessibilityRole="button"
-            accessibilityLabel={language === "ar" ? "العودة للرئيسية" : "Back to Home"}
-          >
-            <MaterialIcons
-              name={isRtl ? "arrow-forward" : "arrow-back"}
-              size={20}
-              color={iconPurple}
-            />
-          </Pressable>
-
-          <ThemedText style={[styles.headerTitle, { color: textColor }]}>
-            {language === "ar" ? "الإعدادات" : "Settings"}
-          </ThemedText>
-
-          <View
-            style={[
-              styles.headerAvatar,
-              { backgroundColor: avatarPlaceholderBg },
-            ]}
-          >
-            {avatarUri ? (
-              <Image
-                source={{ uri: avatarUri }}
-                style={styles.headerAvatarImage}
-                contentFit="cover"
-              />
-            ) : (
-              <View style={styles.headerAvatarPlaceholder}>
-                <MaterialIcons name="person" size={20} color={iconPurple} />
-              </View>
-            )}
-          </View>
-        </View>
-
-        {/* Profile Card */}
-        <LinearGradient
-          colors={["#9B7DFF", "#7C3AED"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.profileCard}
-        >
-          <View style={styles.profileAvatar}>
-            {avatarUri ? (
-              <Image
-                source={{ uri: avatarUri }}
-                style={styles.profileAvatarImage}
-                contentFit="cover"
-              />
-            ) : (
-              <View style={styles.profileAvatarPlaceholder}>
-                <MaterialIcons name="person" size={32} color="#FFFFFF" />
-              </View>
-            )}
-          </View>
-          <ThemedText style={styles.profileName}>{userName}</ThemedText>
-          <ThemedText style={styles.profileEmail}>{userEmail}</ThemedText>
-          <Pressable
-            style={styles.editProfileBtn}
-            onPress={() => router.push("/(tabs)/settings/edit-profile" as any)}
-          >
-            <ThemedText style={styles.editProfileText}>
-              {language === "ar" ? "تعديل الملف" : "Edit Profile"}
-            </ThemedText>
-          </Pressable>
-        </LinearGradient>
-
-        {/* Account Section */}
-        <ThemedText
-          style={[
-            styles.sectionLabel,
-            { color: sectionLabelColor },
-            isRtl ? styles.sectionLabelRtl : null,
-          ]}
-        >
-          {t("account")}
-        </ThemedText>
-
-        <SettingsRow
-          icon="credit-card"
-          iconBg={iconPurpleBg}
-          iconColor={iconPurple}
-          label={t("paymentMethods")}
-          value={language === "ar" ? "3 بطاقات محفوظة" : "3 cards saved"}
+        <SettingsHeader
+          avatarPlaceholderBg={colors.avatarPlaceholder}
+          avatarUri={avatarUri}
+          iconColor={colors.icon}
+          iconPurpleBg={colors.iconBg}
           isRtl={isRtl}
-          labelColor={textColor}
-          valueColor={mutedColor}
-          cardBg={cardBg}
-          chevronColor={chevronColor}
-          onPress={() => router.push("/(tabs)/wallets" as any)}
-          switchTrackOn={switchTrackOn}
-          switchTrackOff={switchTrackOff}
-          switchThumbOn={switchThumbOn}
-          switchThumbOff={switchThumbOff}
+          onBack={() => router.replace("/(tabs)" as any)}
+          textColor={colors.text}
+          title={language === "ar" ? "الإعدادات" : "Settings"}
         />
 
-        <SettingsRow
-          icon="language"
-          iconBg={iconPurpleBg}
-          iconColor={iconPurple}
-          label={language === "ar" ? "اللغة" : "Language"}
-          value={languageValue}
-          isRtl={isRtl}
-          labelColor={textColor}
-          valueColor={mutedColor}
-          cardBg={cardBg}
-          chevronColor={chevronColor}
-          onPress={() => setLanguage(language === "ar" ? "en" : "ar")}
-          switchTrackOn={switchTrackOn}
-          switchTrackOff={switchTrackOff}
-          switchThumbOn={switchThumbOn}
-          switchThumbOff={switchThumbOff}
-        />
-        <SettingsRow
-          icon="category"
-          iconBg={iconPurpleBg}
-          iconColor={iconPurple}
-          label={language === "ar" ? "الفئات" : "Categories"}
-          value={language === "ar" ? "إدارة الفئات" : "Manage categories"}
-          isRtl={isRtl}
-          labelColor={textColor}
-          valueColor={mutedColor}
-          cardBg={cardBg}
-          chevronColor={chevronColor}
-          onPress={() => router.push("/category-suggestions" as any)}
-          switchTrackOn={switchTrackOn}
-          switchTrackOff={switchTrackOff}
-          switchThumbOn={switchThumbOn}
-          switchThumbOff={switchThumbOff}
+        <SettingsProfileCard
+          avatarUri={avatarUri}
+          email={userEmail}
+          editLabel={language === "ar" ? "تعديل الملف" : "Edit Profile"}
+          name={userName}
+          onEditProfile={() => router.push("/(tabs)/settings/edit-profile" as any)}
         />
 
-        {/* Preferences Section */}
-        <ThemedText
-          style={[
-            styles.sectionLabel,
-            { color: sectionLabelColor },
-            isRtl ? styles.sectionLabelRtl : null,
-          ]}
-        >
-          {t("preferences")}
-        </ThemedText>
+        <SettingsSection color={colors.sectionLabel} isRtl={isRtl} title={t("account")}>
+          {accountRows.map((row) => (
+            <SettingsRow key={row.label} {...sharedRowProps} {...row} />
+          ))}
+        </SettingsSection>
 
-        <SettingsRow
-          icon="notifications-none"
-          iconBg={iconPurpleBg}
-          iconColor={iconPurple}
-          label={language === "ar" ? "الإشعارات" : "Notifications"}
-          isRtl={isRtl}
-          labelColor={textColor}
-          valueColor={mutedColor}
-          cardBg={cardBg}
-          chevronColor={chevronColor}
-          type="toggle"
-          toggleValue={notificationsEnabled}
-          onToggle={setNotificationsEnabled}
-          switchTrackOn={switchTrackOn}
-          switchTrackOff={switchTrackOff}
-          switchThumbOn={switchThumbOn}
-          switchThumbOff={switchThumbOff}
-        />
+        <SettingsSection color={colors.sectionLabel} isRtl={isRtl} title={t("preferences")}>
+          {preferenceRows.map((row) => (
+            <SettingsRow key={row.label} {...sharedRowProps} {...row} />
+          ))}
+        </SettingsSection>
 
-        <SettingsRow
-          icon="dark-mode"
-          iconBg={iconPurpleBg}
-          iconColor={iconPurple}
-          label={t("darkMode")}
-          isRtl={isRtl}
-          labelColor={textColor}
-          valueColor={mutedColor}
-          cardBg={cardBg}
-          chevronColor={chevronColor}
-          type="toggle"
-          toggleValue={isDark}
-          onToggle={(val) => setMode(val ? "dark" : "light")}
-          switchTrackOn={switchTrackOn}
-          switchTrackOff={switchTrackOff}
-          switchThumbOn={switchThumbOn}
-          switchThumbOff={switchThumbOff}
-        />
-
-        <SettingsRow
-          icon="shield"
-          iconBg={iconPurpleBg}
-          iconColor={iconPurple}
-          label={language === "ar" ? "الأمان والخصوصية" : "Security & Privacy"}
-          isRtl={isRtl}
-          labelColor={textColor}
-          valueColor={mutedColor}
-          cardBg={cardBg}
-          chevronColor={chevronColor}
-          onPress={() => router.push("/(tabs)/settings/change-password" as any)}
-          switchTrackOn={switchTrackOn}
-          switchTrackOff={switchTrackOff}
-          switchThumbOn={switchThumbOn}
-          switchThumbOff={switchThumbOff}
-        />
-
-        {/* Log Out */}
-        <Pressable
-          style={[
-            styles.logoutBtn,
-            isRtl ? styles.logoutBtnRtl : null,
-            {
-              borderWidth: 1.5,
-              borderColor: logoutColor,
-              borderRadius: 16,
-              marginHorizontal: 4,
-            },
-          ]}
-          onPress={onLogout}
+        <SettingsLogoutButton
+          color={colors.logout}
           disabled={signingOut}
-        >
-          <MaterialIcons name="logout" size={20} color={logoutColor} />
-          <ThemedText style={[styles.logoutText, { color: logoutColor }]}>
-            {language === "ar" ? "تسجيل الخروج" : "Log Out"}
-          </ThemedText>
-        </Pressable>
+          isRtl={isRtl}
+          label={language === "ar" ? "تسجيل الخروج" : "Log Out"}
+          onPress={onLogout}
+        />
       </ScrollView>
     </ThemedView>
   );

@@ -1,6 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 
-import { localizeCategoryList } from "@/src/features/categories/data";
+import {
+  localizeCategoryList,
+  localizeKnownCategoryName,
+} from "@/src/features/settings/components/category-suggestions/data";
 
 export type SupportedLanguage = "en" | "ar";
 export type IconName = keyof typeof Ionicons.glyphMap;
@@ -56,7 +59,7 @@ export const WINDOWS: TimeWindow[] = ["7D", "30D", "90D", "1Y", "ALL"];
 
 export const WEEKDAYS: Record<SupportedLanguage, string[]> = {
   en: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-  ar: ["أحد", "إثن", "ثلا", "أرب", "خمي", "جمع", "سبت"],
+  ar: ["أحد", "إثنين", "ثلاثاء", "أربعاء", "خميس", "جمعة", "سبت"],
 };
 
 const CURRENCY_SYMBOLS: Record<string, string> = {
@@ -68,133 +71,330 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
   EGP: "E£",
 };
 
-const CATEGORY_META: Record<
-  string,
-  {
-    en: string;
-    ar: string;
-    color: string;
-    icon: IconName;
-  }
-> = {
-  shopping: {
-    en: "Shopping",
-    ar: "التسوق",
-    color: "#EC4899",
-    icon: "bag-handle-outline",
-  },
-  fooddrinks: {
-    en: "Food & Drink",
-    ar: "الطعام والمشروبات",
-    color: "#F59E0B",
-    icon: "restaurant-outline",
-  },
-  food: {
-    en: "Food",
-    ar: "الطعام",
-    color: "#F59E0B",
-    icon: "fast-food-outline",
-  },
-  groceries: {
-    en: "Groceries",
-    ar: "البقالة",
-    color: "#14B8A6",
-    icon: "basket-outline",
-  },
-  bills: {
-    en: "Bills",
-    ar: "الفواتير",
-    color: "#2DD4BF",
-    icon: "receipt-outline",
-  },
-  transport: {
-    en: "Transport",
-    ar: "المواصلات",
-    color: "#6366F1",
-    icon: "car-sport-outline",
-  },
-  health: {
-    en: "Health",
-    ar: "الصحة",
-    color: "#EF4444",
-    icon: "medkit-outline",
-  },
-  education: {
-    en: "Education",
-    ar: "التعليم",
-    color: "#8B5CF6",
-    icon: "school-outline",
-  },
-  family: {
-    en: "Family",
-    ar: "العائلة",
-    color: "#F97316",
-    icon: "people-outline",
-  },
-  salary: {
-    en: "Salary",
-    ar: "الراتب",
-    color: "#22C55E",
-    icon: "cash-outline",
-  },
-  freelance: {
-    en: "Freelance",
-    ar: "عمل حر",
-    color: "#10B981",
-    icon: "briefcase-outline",
-  },
-  loan: {
-    en: "Loan",
-    ar: "قرض",
-    color: "#F97316",
-    icon: "card-outline",
-  },
-  investment: {
-    en: "Investment",
-    ar: "استثمار",
-    color: "#0EA5E9",
-    icon: "trending-up-outline",
-  },
-  savings: {
-    en: "Savings",
-    ar: "المدخرات",
-    color: "#06B6D4",
-    icon: "wallet-outline",
-  },
-  goal: {
-    en: "Goals",
-    ar: "الأهداف",
-    color: "#A855F7",
-    icon: "flag-outline",
-  },
-  other: {
-    en: "Other",
-    ar: "أخرى",
-    color: "#94A3B8",
-    icon: "apps-outline",
-  },
-  default: {
-    en: "General",
-    ar: "عام",
-    color: "#64748B",
-    icon: "ellipse-outline",
-  },
+type CategoryStyleRule = {
+  color: string;
+  icon: IconName;
+  key: string;
+  label: Record<SupportedLanguage, string>;
+  matches: string[];
 };
 
-const CATEGORY_ALIASES = Object.entries(CATEGORY_META).reduce<
-  Record<string, string>
->((acc, [key, meta]) => {
-  acc[normalizeCategoryToken(key)] = key;
-  acc[normalizeCategoryToken(meta.en)] = key;
-  acc[normalizeCategoryToken(meta.ar)] = key;
-  return acc;
-}, {});
+const CATEGORY_STYLE_RULES: CategoryStyleRule[] = [
+  {
+    key: "shopping",
+    color: "#EC4899",
+    icon: "bag-handle-outline",
+    label: { en: "Shopping", ar: "التسوق" },
+    matches: [
+      "shopping",
+      "shop",
+      "clothing",
+      "beauty",
+      "gifts",
+      "electronics",
+      "التسوق",
+      "الملابس",
+      "الجمال",
+      "الهدايا",
+      "الإلكترونيات",
+    ],
+  },
+  {
+    key: "fooddrinks",
+    color: "#F59E0B",
+    icon: "restaurant-outline",
+    label: { en: "Food & Drinks", ar: "الطعام والمشروبات" },
+    matches: [
+      "food",
+      "drinks",
+      "dining",
+      "restaurant",
+      "coffee",
+      "snacks",
+      "bakery",
+      "breakfast",
+      "lunch",
+      "dinner",
+      "fastfood",
+      "seafood",
+      "الطعام",
+      "المطاعم",
+      "القهوة",
+      "الوجبات",
+      "المخبوزات",
+      "الإفطار",
+      "الغداء",
+      "العشاء",
+    ],
+  },
+  {
+    key: "groceries",
+    color: "#14B8A6",
+    icon: "basket-outline",
+    label: { en: "Groceries", ar: "البقالة" },
+    matches: ["groceries", "grocery", "البقالة"],
+  },
+  {
+    key: "bills",
+    color: "#2DD4BF",
+    icon: "receipt-outline",
+    label: { en: "Bills", ar: "الفواتير" },
+    matches: [
+      "bills",
+      "bill",
+      "rent",
+      "utilities",
+      "utility",
+      "internet",
+      "mobile",
+      "insurance",
+      "taxes",
+      "fees",
+      "housing",
+      "electricity",
+      "water",
+      "gasbill",
+      "phonebill",
+      "فاتورة",
+      "الفواتير",
+      "الإيجار",
+      "المرافق",
+      "الإنترنت",
+      "الهاتف",
+      "التأمين",
+      "الضرائب",
+      "الرسوم",
+      "الكهرباء",
+      "المياه",
+    ],
+  },
+  {
+    key: "transport",
+    color: "#6366F1",
+    icon: "car-sport-outline",
+    label: { en: "Transport", ar: "المواصلات" },
+    matches: [
+      "transport",
+      "travel",
+      "taxi",
+      "bus",
+      "metro",
+      "parking",
+      "gas",
+      "fuel",
+      "tolls",
+      "carpayment",
+      "carinsurance",
+      "maintenance",
+      "ridehailing",
+      "flights",
+      "hotels",
+      "visa",
+      "vacation",
+      "المواصلات",
+      "السفر",
+      "تاكسي",
+      "الحافلة",
+      "المترو",
+      "الوقود",
+      "الصيانة",
+      "الرحلات",
+      "الفنادق",
+      "التأشيرة",
+      "الإجازة",
+    ],
+  },
+  {
+    key: "health",
+    color: "#EF4444",
+    icon: "medkit-outline",
+    label: { en: "Health", ar: "الصحة" },
+    matches: [
+      "health",
+      "wellness",
+      "fitness",
+      "pharmacy",
+      "medical",
+      "dental",
+      "vision",
+      "medicine",
+      "hospital",
+      "therapy",
+      "gym",
+      "sports",
+      "yoga",
+      "spa",
+      "الصحة",
+      "العافية",
+      "اللياقة",
+      "الصيدلية",
+      "المستشفى",
+      "العلاج",
+      "النادي",
+      "الرياضة",
+      "اليوغا",
+      "السبا",
+    ],
+  },
+  {
+    key: "education",
+    color: "#8B5CF6",
+    icon: "school-outline",
+    label: { en: "Education", ar: "التعليم" },
+    matches: [
+      "education",
+      "school",
+      "university",
+      "tuition",
+      "courses",
+      "books",
+      "stationery",
+      "التعليم",
+      "المدرسة",
+      "الجامعة",
+      "الدورات",
+      "الكتب",
+      "القرطاسية",
+    ],
+  },
+  {
+    key: "family",
+    color: "#F97316",
+    icon: "people-outline",
+    label: { en: "Family", ar: "العائلة" },
+    matches: [
+      "family",
+      "kids",
+      "childcare",
+      "baby",
+      "pets",
+      "petfood",
+      "vet",
+      "العائلة",
+      "الأطفال",
+      "رعاية",
+      "مستلزمات",
+      "الحيوانات",
+      "البيطري",
+    ],
+  },
+  {
+    key: "salary",
+    color: "#22C55E",
+    icon: "cash-outline",
+    label: { en: "Salary", ar: "الراتب" },
+    matches: [
+      "salary",
+      "bonus",
+      "commissions",
+      "refunds",
+      "atm",
+      "banktransfer",
+      "الراتب",
+      "المكافأة",
+      "العمولات",
+      "الاسترجاع",
+      "الصراف",
+      "تحويل",
+    ],
+  },
+  {
+    key: "freelance",
+    color: "#10B981",
+    icon: "briefcase-outline",
+    label: { en: "Freelance", ar: "العمل الحر" },
+    matches: [
+      "freelance",
+      "software",
+      "services",
+      "legal",
+      "office",
+      "supplies",
+      "العملالحر",
+      "البرمجيات",
+      "الخدمات",
+      "القانونية",
+      "المكتب",
+      "المستلزمات",
+    ],
+  },
+  {
+    key: "investment",
+    color: "#0EA5E9",
+    icon: "trending-up-outline",
+    label: { en: "Investment", ar: "الاستثمار" },
+    matches: [
+      "investment",
+      "investments",
+      "savings",
+      "mortgage",
+      "debtpayment",
+      "creditcardpayment",
+      "donations",
+      "charity",
+      "الاستثمار",
+      "الاستثمارات",
+      "الادخار",
+      "التبرعات",
+      "الخيرية",
+    ],
+  },
+  {
+    key: "loan",
+    color: "#F97316",
+    icon: "card-outline",
+    label: { en: "Loan", ar: "قرض" },
+    matches: ["loan", "emergency", "قرض", "الطوارئ"],
+  },
+  {
+    key: "goal",
+    color: "#A855F7",
+    icon: "flag-outline",
+    label: { en: "Goals", ar: "الأهداف" },
+    matches: ["goal", "goals", "الأهداف", "هدف"],
+  },
+];
+
+const FALLBACK_COLORS = ["#64748B", "#8B5CF6", "#06B6D4", "#F97316", "#22C55E", "#EC4899"];
+
+const FALLBACK_ICONS: IconName[] = [
+  "ellipse-outline",
+  "apps-outline",
+  "wallet-outline",
+  "grid-outline",
+  "pricetag-outline",
+  "star-outline",
+];
 
 function normalizeCategoryToken(value: unknown) {
   return String(value ?? "")
     .trim()
     .toLowerCase()
-    .replace(/\s|&|\//g, "");
+    .replace(/[\s&/._-]/g, "");
+}
+
+function hashValue(value: string) {
+  return value.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0);
+}
+
+function getCategoryRule(value: unknown) {
+  const normalized = normalizeCategoryToken(value);
+  if (!normalized) return null;
+
+  return (
+    CATEGORY_STYLE_RULES.find((rule) =>
+      rule.matches.some((match) => normalized.includes(normalizeCategoryToken(match))),
+    ) ?? null
+  );
+}
+
+function getFallbackStyle(key: string) {
+  const seed = hashValue(key || "other");
+  return {
+    key: key || "other",
+    color: FALLBACK_COLORS[seed % FALLBACK_COLORS.length],
+    icon: FALLBACK_ICONS[seed % FALLBACK_ICONS.length],
+  };
 }
 
 export function normalizeCurrency(value: unknown) {
@@ -207,20 +407,22 @@ export function normalizeCategory(raw: unknown, language: SupportedLanguage) {
   const rawLabel = String(raw ?? "")
     .trim()
     .replace(/\s+/g, " ");
-  const alias = normalizeCategoryToken(raw);
-  const key = (CATEGORY_ALIASES[alias] ?? alias) || "other";
-  const meta = CATEGORY_META[key] ?? CATEGORY_META.other;
+  const rule = getCategoryRule(rawLabel);
+  const fallback = getFallbackStyle(normalizeCategoryToken(rawLabel));
+
   return {
-    key,
-    label: CATEGORY_META[key] ? meta[language] : rawLabel || meta[language],
-    color: meta.color,
-    icon: meta.icon,
+    key: rule?.key ?? fallback.key,
+    label: rawLabel
+      ? localizeKnownCategoryName(rawLabel, language)
+      : rule?.label[language] ?? (language === "ar" ? "أخرى" : "Other"),
+    color: rule?.color ?? fallback.color,
+    icon: rule?.icon ?? fallback.icon,
   };
 }
 
 export function normalizeCategoryKey(value: string) {
-  const alias = normalizeCategoryToken(value);
-  return CATEGORY_ALIASES[alias] ?? alias;
+  const normalized = normalizeCategoryToken(value);
+  return getCategoryRule(normalized)?.key ?? normalized;
 }
 
 export function mapSelectedCategoryOptions(
@@ -264,9 +466,12 @@ export function startWindow(window: TimeWindow) {
 export function belongsToUserPurchase(raw: any, uid: string) {
   const keys = [
     "uid",
+    "userUid",
+    "userUID",
     "userId",
     "ownerUid",
     "createdByUid",
+    "createdByUID",
     "creatorUid",
     "buyerUid",
     "purchaserUid",
@@ -274,10 +479,16 @@ export function belongsToUserPurchase(raw: any, uid: string) {
     "receiverUid",
   ];
 
+  const hasExplicitOwner =
+    keys.some((key) => String(raw?.[key] ?? "").trim().length > 0) ||
+    Boolean(raw?.members && Object.keys(raw.members).length) ||
+    (Array.isArray(raw?.participants) && raw.participants.length > 0);
+
   return (
     keys.some((key) => String(raw?.[key] ?? "") === uid) ||
     Boolean(raw?.members?.[uid]) ||
-    (Array.isArray(raw?.participants) && raw.participants.includes(uid))
+    (Array.isArray(raw?.participants) && raw.participants.includes(uid)) ||
+    !hasExplicitOwner
   );
 }
 
