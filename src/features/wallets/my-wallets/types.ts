@@ -1,5 +1,7 @@
 export type WalletRecord = {
   currancies?: Record<string, number>;
+  currencies?: Record<string, number>;
+  currentAmount?: number;
   id?: number;
   state?: string;
   expiryDate?: string;

@@ -6,6 +6,7 @@ import { FormStyles as styles, ToastStyles as toastStyles, DarkThemeStyles } fro
 import { CATEGORIES } from '../constants';
 import { PurchaseFormProps, ToastProps, Currency } from '../types';
 import { useThemeMode } from '@/src/providers/ThemeModeProvider';
+import { useAuth } from '@/src/providers/AuthProvider';
 
 function Toast({ visible, message }: ToastProps) {
   const opacity = useMemo(() => new Animated.Value(0), []);
@@ -42,8 +43,19 @@ export default function PurchaseForm({
 }: PurchaseFormProps) {
   const { t, locale } = useI18n() as any;
   const { colorScheme } = useThemeMode();
+  const { profile } = useAuth();
   const isDark = colorScheme === 'dark';
   const isRtl = locale === 'ar' || I18nManager.isRTL;
+
+  const filteredCategories = useMemo(() => {
+    if (!profile?.categories || profile.categories.length === 0) return CATEGORIES;
+    
+    const userCats = profile.categories.map(c => c.toLowerCase().trim());
+    return CATEGORIES.filter(cat => 
+      userCats.includes(cat.labelKey.toLowerCase()) ||
+      userCats.some(uc => cat.labelKey.toLowerCase().includes(uc))
+    );
+  }, [profile?.categories]);
 
   return (
     <View style={styles.container}>
@@ -136,7 +148,7 @@ export default function PurchaseForm({
         name="category"
         render={({ field: { onChange, value } }) => (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
-            {CATEGORIES.map((cat) => (
+            {filteredCategories.map((cat) => (
               <TouchableOpacity
                 key={cat.labelKey}
                 onPress={() => onChange(cat.labelKey)}

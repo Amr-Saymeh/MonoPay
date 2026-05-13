@@ -43,12 +43,14 @@ export function usePurchasesForm(
     const unsubPurchases = onValue(purchasesRef, (snapshot) => {
       if (!snapshot.exists()) return;
       const data = snapshot.val();
-      const items = Object.values(data).map((item: any) => ({
-        name: item.title,
-        cost: item.amount?.toString(),
-        currency: item.currency as Currency,
-        category: item.category,
-      })).filter(i => i.name && typeof i.name === 'string');
+      const items = Object.values(data)
+        .filter((item: any) => item.userId === user?.uid)
+        .map((item: any) => ({
+          name: item.title,
+          cost: item.amount?.toString(),
+          currency: item.currency as Currency,
+          category: item.category,
+        })).filter(i => i.name && typeof i.name === 'string');
       
       // Keep only unique names, prefer most recent
       const unique = Array.from(new Map(items.map(i => [i.name, i])).values());
@@ -95,10 +97,12 @@ export function usePurchasesForm(
   }, [nameInput, pastPurchases, availableBundles]);
 
   const performSubmit = async (data: FormValues) => {
+    if (!user?.uid) return;
     setLoading(true);
     try {
       const now = new Date();
       await set(push(ref(db, 'purchases')), {
+        userId: user.uid,
         title: data.name.trim(),
         amount: parseFloat(data.cost),
         currency: data.currency,

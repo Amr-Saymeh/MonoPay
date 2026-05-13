@@ -56,14 +56,8 @@ export default function HomeHeader() {
           <View style={styles.avatarWrapper}>
             <Ionicons name="person" size={30} color="#fff" />
           </View>
-          <View style={styles.menuIcon}>
-            <Ionicons name="menu-outline" size={32} color="#fff" />
-          </View>
 
           <View style={styles.headerTextContainer}>
-            <View style={styles.greetingWrapper}>
-              <Text style={styles.greeting}>{t("goodEvening")}</Text>
-            </View>
 
             <Text style={styles.welcome}>
               {t("welcomeBack")}{' '}
@@ -71,12 +65,7 @@ export default function HomeHeader() {
             <Text style={styles.name}>{profile?.name}</Text>
           </View>
 
-          <View style={styles.notificationWrapper}>
-            <Ionicons name="notifications-outline" size={26} color="#fff" />
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>3</Text>
-            </View>
-          </View>
+          <View style={{ width: 76 }} />
         </View>
 
         <View style={[styles.headerBigCircle, isDark && { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' }]} />

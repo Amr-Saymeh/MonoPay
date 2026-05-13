@@ -46,7 +46,7 @@ export function useWalletCards({ userId }: UseWalletCardsParams) {
     }
 
     const unsubscribes = walletIds.map((walletId) => {
-      const walletKey = `wallet${walletId}`;
+      const walletKey = `${walletId}`;
 
       return onValue(
         ref(db, `wallets/${walletKey}`),
@@ -83,7 +83,7 @@ export function useWalletCards({ userId }: UseWalletCardsParams) {
         const walletid = Number(link?.walletid);
         if (!Number.isFinite(walletid) || walletid <= 0) return null;
 
-        const wallet = wallets[`wallet${walletid}`];
+        const wallet = wallets[`${walletid}`];
 
         return {
           userWalletKey,

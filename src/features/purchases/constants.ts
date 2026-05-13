@@ -35,6 +35,9 @@ export const CATEGORIES = [
   { labelKey: 'bills',      icon: '📄' },
   { labelKey: 'education',  icon: '📚' },
   { labelKey: 'personalCare', icon: '✨' },
+  { labelKey: 'travel',     icon: '✈️' },
+  { labelKey: 'utilities',   icon: '💡' },
+  { labelKey: 'subscriptions', icon: '📅' },
 ];
 
 export const CATEGORY_META: Record<string, { icon: string; bg: string }> = {
@@ -47,6 +50,9 @@ export const CATEGORY_META: Record<string, { icon: string; bg: string }> = {
   'bills': { icon: '📄', bg: '#ECEFF1' },
   'education': { icon: '📚', bg: '#E0F2F1' },
   'personalCare': { icon: '✨', bg: '#F3E5F5' },
+  'travel': { icon: '✈️', bg: '#E1F5FE' },
+  'utilities': { icon: '💡', bg: '#FFFDE7' },
+  'subscriptions': { icon: '📅', bg: '#FCE4EC' },
 };
 
 export const DEFAULT_META = { icon: '📦', bg: '#F2F2F7' };

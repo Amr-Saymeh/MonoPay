@@ -4,13 +4,21 @@ import { ref, onValue, remove } from 'firebase/database';
 import { db } from '@/src/firebaseConfig';
 import { useI18n } from '@/hooks/use-i18n';
 import { PurchaseItem } from '../types';
+import { useAuth } from '@/src/providers/AuthProvider';
 
 export function usePurchasesList() {
   const { t } = useI18n() as any;
+  const { user } = useAuth();
   const [purchases, setPurchases] = useState<PurchaseItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!user?.uid) {
+      setPurchases([]);
+      setLoading(false);
+      return;
+    }
+
     const purchasesRef = ref(db, 'purchases');
     const unsubscribe = onValue(purchasesRef, (snapshot) => {
       if (!snapshot.exists()) {
@@ -24,9 +32,13 @@ export function usePurchasesList() {
 
       snapshot.forEach((child) => {
         const val = child.val();
-        const itemDate = val.createdAt?.split('T')[0];
-        if (itemDate === today) {
-          items.push({ id: child.key!, ...val });
+        
+        // Filter by User ID AND Today's date
+        if (val.userId === user.uid) {
+          const itemDate = val.createdAt?.split('T')[0];
+          if (itemDate === today) {
+            items.push({ id: child.key!, ...val });
+          }
         }
       });
 
