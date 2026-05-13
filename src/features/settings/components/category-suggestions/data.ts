@@ -5,7 +5,7 @@ type LocalizedCategory = {
   ar: string;
 };
 
-const LOCALIZED_SUGGESTIONS: ReadonlyArray<LocalizedCategory> = [
+const LOCALIZED_SUGGESTIONS: readonly LocalizedCategory[] = [
   { en: "Shopping", ar: "التسوق" },
   { en: "Dining", ar: "المطاعم" },
   { en: "Groceries", ar: "البقالة" },

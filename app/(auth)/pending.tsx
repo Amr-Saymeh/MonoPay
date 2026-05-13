@@ -3,11 +3,7 @@ import React, { useEffect } from "react";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useRouter } from "expo-router";
 import { StyleSheet, View } from "react-native";
-import Animated, {
-    FadeInDown,
-    FadeInUp,
-    ZoomIn,
-} from "react-native-reanimated";
+import Animated, { FadeInDown, FadeInUp, ZoomIn } from "react-native-reanimated";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -34,23 +30,20 @@ export default function PendingScreen() {
           <MaterialIcons name="hourglass-top" size={110} color="#8B5CF6" />
         </Animated.View>
 
-        <Animated.View
-          entering={FadeInDown.duration(450).delay(80)}
-          style={styles.textBlock}
-        >
+        <Animated.View entering={FadeInDown.duration(450).delay(80)} style={styles.textBlock}>
           <ThemedText style={styles.title}>{t("accountPending")}</ThemedText>
           <ThemedText style={styles.sub}>{t("pendingDescription")}</ThemedText>
         </Animated.View>
 
-        <Animated.View
-          entering={FadeInUp.duration(450).delay(150)}
-          style={styles.actions}
-        >
+        <Animated.View entering={FadeInUp.duration(450).delay(150)} style={styles.actions}>
           <GradientButton
             label={t("logout")}
             onPress={async () => {
-              await signOut();
-              router.replace("/(auth)/login" as any);
+              try {
+                await signOut();
+              } finally {
+                router.replace("/(auth)/login" as any);
+              }
             }}
             loading={signingOut}
           />

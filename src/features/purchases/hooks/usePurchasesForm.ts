@@ -1,10 +1,10 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Keyboard } from 'react-native';
-import { useForm } from 'react-hook-form';
-import { ref, push, set, onValue } from 'firebase/database';
 import { db } from '@/src/firebaseConfig';
-import { FormValues, Currency, SuggestionItem } from '../types';
 import { useAuth } from '@/src/providers/AuthProvider';
+import { onValue, push, ref, set } from 'firebase/database';
+import { useEffect, useMemo, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { Keyboard } from 'react-native';
+import { Currency, FormValues, SuggestionItem } from '../types';
 
 export function usePurchasesForm(
   dailyBudgetNIS: number,
@@ -13,6 +13,7 @@ export function usePurchasesForm(
   onSuccessAction?: () => void, 
   onErrorAction?: () => void
 ) {
+  const { user } = useAuth();
   const [visibleToast, setVisibleToast] = useState(false);
   const [loading, setLoading] = useState(false);
   const [pastPurchases, setPastPurchases] = useState<SuggestionItem[]>([]);
@@ -95,8 +96,6 @@ export function usePurchasesForm(
       .slice(0, 6);
   }, [nameInput, pastPurchases, availableBundles]);
 
-  const { user } = useAuth();
-
   const performSubmit = async (data: FormValues) => {
     if (!user?.uid) return;
     setLoading(true);
@@ -108,6 +107,8 @@ export function usePurchasesForm(
         amount: parseFloat(data.cost),
         currency: data.currency,
         category: data.category,
+        uid: user?.uid ?? null,
+        createdByUid: user?.uid ?? null,
         time: now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
         createdAt: now.toISOString(),
         isBundle: false,
