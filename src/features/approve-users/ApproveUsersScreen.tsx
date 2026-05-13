@@ -19,8 +19,10 @@ export default function ApproveUsersScreen() {
   const { pendingUsers } = usePendingUsers();
   const [expandedPendingUserId, setExpandedPendingUserId] = useState<string | null>(null);
   const pendingCount = pendingUsers.length;
-  const approveActionText = t("approveAction");
-  const rejectActionText = t("rejectAction");
+
+  const approveLabel = t("approveAction");
+  const rejectLabel = t("rejectAction");
+
   const emailLabel = t("email");
   const phoneLabel = t("phone");
   const addressLabel = t("address");
@@ -30,12 +32,12 @@ export default function ApproveUsersScreen() {
 
   function approvePendingUser(userId: string, userName?: string) {
     const title = t("approveUserTitle");
-    const message = `${approveActionText} ${userName ?? userId}?`;
+    const message = `${approveLabel} ${userName ?? userId}?`;
 
     Alert.alert(title, message, [
       { text: t("cancel"), style: "cancel" },
       {
-        text: approveActionText,
+        text: approveLabel,
         style: "default",
         onPress: () => void approveUser(userId),
       },
@@ -44,12 +46,12 @@ export default function ApproveUsersScreen() {
 
   function rejectPendingUser(userId: string, userName?: string) {
     const title = t("rejectUserTitle");
-    const message = `${rejectActionText} ${userName ?? userId}?`;
+    const message = `${rejectLabel} ${userName ?? userId}?`;
 
     Alert.alert(title, message, [
       { text: t("cancel"), style: "cancel" },
       {
-        text: rejectActionText,
+        text: rejectLabel,
         style: "destructive",
         onPress: () => void rejectUser(userId),
       },
@@ -96,8 +98,8 @@ export default function ApproveUsersScreen() {
                 key={item.id}
                 item={item}
                 expanded={isExpanded}
-                approveLabel={approveActionText}
-                rejectLabel={rejectActionText}
+                approveLabel={approveLabel}
+                rejectLabel={rejectLabel}
                 emailLabel={emailLabel}
                 phoneLabel={phoneLabel}
                 addressLabel={addressLabel}

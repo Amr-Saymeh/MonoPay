@@ -9,6 +9,7 @@ import { AuthInput } from "@/components/ui/auth-input";
 import { GradientButton } from "@/components/ui/gradient-button";
 import { useI18n } from "@/hooks/use-i18n";
 import { useAuth } from "@/src/providers/AuthProvider";
+import { getUserLabel } from "@/src/utils/userLabel";
 
 import { EmojiSelector } from "./components/EmojiSelector";
 import { InitialBalancesSection } from "./components/InitialBalancesSection";
@@ -57,32 +58,36 @@ export default function AddWalletScreen() {
     currentUserId: user?.uid,
   });
 
+  if (!user) {
+    return (
+      <ThemedView style={styles.screen}>
+        <ThemedText type="subtitle">{t("pleaseSignIn")}</ThemedText>
+      </ThemedView>
+    );
+  }
+
+  const currentUserId = user.uid;
+
   const walletColor = getDefaultColor(walletType);
   const previewCurrencies = buildPreviewCurrencies(startingBalances);
-  const previewMemberUids =
-    !isSharedWallet || !user
-      ? undefined
-      : Array.from(new Set([user.uid, ...selectedMemberUids.filter(Boolean)]));
-  const previewOwnerLabel =
-    !isSharedWallet || !user ? undefined : allUsers[user.uid]?.name?.trim() || user.uid;
-  const canCreate = walletName.trim().length > 0 && Boolean(user);
+  const previewMemberUids = isSharedWallet
+    ? Array.from(new Set([currentUserId, ...selectedMemberUids.filter(Boolean)]))
+    : undefined;
+  const previewOwnerLabel = isSharedWallet
+    ? getUserLabel(allUsers[currentUserId], currentUserId)
+    : undefined;
+  const canCreate = walletName.trim().length > 0;
 
-  const walletTypeOptions = TYPE_OPTIONS.map((option) => {
-    let label = "";
-    switch (option.key) {
-      case "real":
-        label = t("walletTypeReal");
-        break;
-      case "credit":
-        label = t("walletTypeCredit");
-        break;
-      case "shared":
-        label = t("walletTypeShared");
-        break;
-    }
+  const walletTypeText: Record<WalletType, string> = {
+    real: t("walletTypeReal"),
+    credit: t("walletTypeCredit"),
+    shared: t("walletTypeShared"),
+  };
 
-    return { ...option, label };
-  });
+  const walletTypeOptions = TYPE_OPTIONS.map((option) => ({
+    ...option,
+    label: walletTypeText[option.key],
+  }));
 
   function addBalanceRow() {
     setStartingBalances((current) => [
@@ -115,8 +120,6 @@ export default function AddWalletScreen() {
   }
 
   async function createWallet() {
-    if (!user) return;
-
     const trimmedName = walletName.trim();
     if (trimmedName.length === 0) {
       Alert.alert(t("error"), t("walletNameRequired"));
@@ -153,7 +156,7 @@ export default function AddWalletScreen() {
     }
 
     await createWalletInDb({
-      currentUserId: user.uid,
+      currentUserId,
       walletName: trimmedName,
       type: walletType,
       expiryDate: creditExpiry,
@@ -163,14 +166,6 @@ export default function AddWalletScreen() {
       selectedMemberUids,
     });
     router.back();
-  }
-
-  if (!user) {
-    return (
-      <ThemedView style={styles.screen}>
-        <ThemedText type="subtitle">{t("pleaseSignIn")}</ThemedText>
-      </ThemedView>
-    );
   }
 
   return (
