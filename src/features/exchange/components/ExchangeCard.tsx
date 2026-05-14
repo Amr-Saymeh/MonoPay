@@ -1,7 +1,7 @@
+import { useThemeColor } from '@/hooks/use-theme-color';
 import { FontAwesome } from '@expo/vector-icons';
 import React from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { useThemeColor } from '@/hooks/use-theme-color';
+import { Keyboard, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 interface ExchangeCardProps {
   fromCurrency: string;
@@ -45,8 +45,11 @@ export const ExchangeCard: React.FC<ExchangeCardProps> = ({
             placeholder="0.00"
             placeholderTextColor="#9ca3af"
             keyboardType="decimal-pad"
+            returnKeyType="done"
+            blurOnSubmit
             value={amount}
             onChangeText={onAmountChange}
+            onSubmitEditing={() => Keyboard.dismiss()}
           />
           <TouchableOpacity style={[styles.selector, { backgroundColor: inputBgColor }]} onPress={onFromCurrencyPress}>
             <Text style={[styles.code, { color: textColor }]}>{fromCurrency}</Text>

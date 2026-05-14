@@ -1,12 +1,12 @@
+import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
+import { useThemeColor } from '@/hooks/use-theme-color';
 import { SharedCard } from '@/src/features/card/SharedCard';
 import { FontAwesome } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { get, ref, set } from 'firebase/database';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { ThemedView } from '@/components/themed-view';
-import { ThemedText } from '@/components/themed-text';
-import { useThemeColor } from '@/hooks/use-theme-color';
 import {
   CurrencySelectorModal,
   ExchangeCard,
@@ -70,6 +70,26 @@ const Exchange: React.FC = () => {
     return (parsedAmount * currentRate).toFixed(2);
   }, [currentRate, parsedAmount]);
 
+  const normalizedFromCurrency = useMemo(
+    () => normalizeCurrency(fromCurrency),
+    [fromCurrency]
+  );
+
+  const normalizedToCurrency = useMemo(
+    () => normalizeCurrency(toCurrency),
+    [toCurrency]
+  );
+
+  const fromBalance = useMemo(
+    () => getBalance(fromCurrency),
+    [getBalance, fromCurrency]
+  );
+
+  const toBalance = useMemo(
+    () => getBalance(toCurrency),
+    [getBalance, toCurrency]
+  );
+
   const toCurrencies = useMemo(
     () => getAvailableToCurrencies(fromCurrency),
     [fromCurrency]
@@ -88,26 +108,28 @@ const Exchange: React.FC = () => {
     setShowWalletModal(false);
   }, []);
 
-  const handleAmountChange = useCallback((value: string) => {
-    setAmount(value);
+  const resetStatus = useCallback(() => {
     setExchangeError(null);
     setExchangeSuccess(false);
   }, []);
 
+  const handleAmountChange = useCallback((value: string) => {
+    setAmount(value);
+    resetStatus();
+  }, [resetStatus]);
+
   const handleSwap = useCallback(() => {
     setFromCurrency(toCurrency);
     setToCurrency(fromCurrency);
-    setAmount('');
-    setExchangeError(null);
-    setExchangeSuccess(false);
-  }, [fromCurrency, toCurrency]);
+    setAmount((prevAmount) => convertedAmount ?? prevAmount);
+    resetStatus();
+  }, [convertedAmount, fromCurrency, resetStatus, toCurrency]);
 
   const handleMax = useCallback(() => {
     const balance = getBalance(fromCurrency);
     setAmount(balance.toFixed(2));
-    setExchangeError(null);
-    setExchangeSuccess(false);
-  }, [fromCurrency, getBalance]);
+    resetStatus();
+  }, [fromCurrency, getBalance, resetStatus]);
 
   const handleExchange = useCallback(async () => {
     if (!user || !selectedWalletId || !fromCurrency || !toCurrency) return;
@@ -177,7 +199,7 @@ const Exchange: React.FC = () => {
     user,
   ]);
 
-  if (walletsLoading || !selectedWallet) {
+  if (isLoading || !selectedWallet) {
     return (
       <ThemedView style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#6366f1" />
@@ -220,12 +242,12 @@ const Exchange: React.FC = () => {
         </View>
 
         <ExchangeCard
-          fromCurrency={normalizeCurrency(fromCurrency)}
-          toCurrency={normalizeCurrency(toCurrency)}
+          fromCurrency={normalizedFromCurrency}
+          toCurrency={normalizedToCurrency}
           amount={amount}
           convertedAmount={convertedAmount}
-          fromBalance={getBalance(fromCurrency)}
-          toBalance={getBalance(toCurrency)}
+          fromBalance={fromBalance}
+          toBalance={toBalance}
           onAmountChange={handleAmountChange}
           onFromCurrencyPress={() => setShowFromCurrencyModal(true)}
           onToCurrencyPress={() => setShowToCurrencyModal(true)}
@@ -234,8 +256,8 @@ const Exchange: React.FC = () => {
         />
 
         <RateInfo
-          fromCurrency={normalizeCurrency(fromCurrency)}
-          toCurrency={normalizeCurrency(toCurrency)}
+          fromCurrency={normalizedFromCurrency}
+          toCurrency={normalizedToCurrency}
           rate={currentRate}
         />
 
@@ -261,12 +283,12 @@ const Exchange: React.FC = () => {
       <CurrencySelectorModal
         visible={showFromCurrencyModal}
         currencies={SUPPORTED_CURRENCIES}
-        selectedCurrency={normalizeCurrency(fromCurrency)}
+        selectedCurrency={normalizedFromCurrency}
         title="Select Currency"
         onSelect={(currency) => {
           setFromCurrency(normalizeCurrency(currency));
           setShowFromCurrencyModal(false);
-          setExchangeError(null);
+          resetStatus();
         }}
         onClose={() => setShowFromCurrencyModal(false)}
       />
@@ -274,12 +296,12 @@ const Exchange: React.FC = () => {
       <CurrencySelectorModal
         visible={showToCurrencyModal}
         currencies={toCurrencies}
-        selectedCurrency={normalizeCurrency(toCurrency)}
+        selectedCurrency={normalizedToCurrency}
         title="Select Currency"
         onSelect={(currency) => {
           setToCurrency(normalizeCurrency(currency));
           setShowToCurrencyModal(false);
-          setExchangeError(null);
+          resetStatus();
         }}
         onClose={() => setShowToCurrencyModal(false)}
       />
