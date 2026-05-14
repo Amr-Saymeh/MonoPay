@@ -1,16 +1,15 @@
-import React, { useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import {
-    ActivityIndicator,
-    Alert,
-    Pressable,
-    StyleSheet,
-    View,
+  Alert,
+  StyleSheet,
+  View,
 } from "react-native";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -25,6 +24,7 @@ export default function AvatarCameraScreen() {
   const { t } = useI18n();
   const router = useRouter();
   const { user, profile } = useAuth();
+  const insets = useSafeAreaInsets();
   const surface = useThemeColor({}, "surface");
   const border = useThemeColor({}, "border");
 
@@ -118,40 +118,32 @@ export default function AvatarCameraScreen() {
         )}
       </View>
 
-      <View style={styles.actions}>
+      <View style={[styles.actions, { paddingBottom: Math.max(insets.bottom + 20, 24) }]}>
         {photoUri ? (
           <View style={styles.row}>
-            <Pressable
+            <GradientButton
+              label={t("retake")}
               onPress={() => setPhotoUri(null)}
-              style={({ pressed }) => [
-                styles.secondary,
-                { backgroundColor: surface, borderColor: border },
-                pressed ? styles.pressed : null,
-              ]}
-            >
-              <ThemedText type="defaultSemiBold">{t("retake")}</ThemedText>
-            </Pressable>
+              iconName="refresh"
+              variant="secondary"
+              style={styles.inlineButton}
+            />
             <GradientButton
               label={t("usePhoto")}
               onPress={() => void onUse()}
               disabled={!photoUri}
               loading={saving}
-              style={{ flex: 1 }}
+              style={styles.inlineButton}
             />
           </View>
         ) : (
-          <Pressable
+          <GradientButton
+            label={t("capture")}
             onPress={() => void onCapture()}
-            style={({ pressed }) => [styles.capture, pressed ? styles.pressed : null]}
-          >
-            {capturing ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <ThemedText type="defaultSemiBold" style={styles.captureText}>
-                {t("capture")}
-              </ThemedText>
-            )}
-          </Pressable>
+            iconName="photo-camera"
+            loading={capturing}
+            style={styles.captureButton}
+          />
         )}
       </View>
     </ThemedView>
@@ -184,33 +176,24 @@ const styles = StyleSheet.create({
   },
   actions: {
     padding: 16,
-    paddingBottom: 30,
-  },
-  capture: {
-    height: 56,
-    borderRadius: 16,
     alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#6D28D9",
   },
-  captureText: {
-    color: "#fff",
+  captureButton: {
+    width: "100%",
+    maxWidth: 520,
+    alignSelf: "center",
   },
   pressed: {
     opacity: 0.88,
   },
   row: {
-    flexDirection: "row",
     gap: 12,
-    alignItems: "center",
+    width: "100%",
+    maxWidth: 520,
+    alignSelf: "center",
   },
-  secondary: {
-    height: 52,
-    paddingHorizontal: 18,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
+  inlineButton: {
+    width: "100%",
   },
   previewWrap: {
     flex: 1,

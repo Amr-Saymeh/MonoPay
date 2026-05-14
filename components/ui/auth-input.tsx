@@ -1,7 +1,7 @@
-import React, { forwardRef, useMemo } from "react";
+import { forwardRef, useMemo } from "react";
 
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { Pressable, StyleSheet, TextInput, type TextInputProps, View } from "react-native";
+import { Pressable, StyleSheet, Text, TextInput, type TextInputProps, View } from "react-native";
 
 import { Fonts } from "@/constants/theme";
 import { useI18n } from "@/hooks/use-i18n";
@@ -11,6 +11,9 @@ export type AuthInputProps = {
   value: string;
   onChangeText: (v: string) => void;
   placeholder: string;
+  errorMessage?: string;
+  statusMessage?: string;
+  statusTone?: "default" | "success";
   onToggleSecure?: () => void;
 } & Omit<TextInputProps, "value" | "onChangeText" | "placeholder">;
 
@@ -19,6 +22,9 @@ export const AuthInput = forwardRef<TextInput, AuthInputProps>(function AuthInpu
     value,
     onChangeText,
     placeholder,
+    errorMessage,
+    statusMessage,
+    statusTone = "default",
     secureTextEntry,
     onToggleSecure,
     autoCapitalize,
@@ -33,6 +39,8 @@ export const AuthInput = forwardRef<TextInput, AuthInputProps>(function AuthInpu
   const textColor = useThemeColor({}, "text");
   const placeholderColor = useThemeColor({}, "placeholder");
   const iconColor = useThemeColor({}, "icon");
+  const errorColor = useThemeColor({ light: "#DC2626", dark: "#F87171" }, "text");
+  const successColor = useThemeColor({ light: "#15803D", dark: "#4ADE80" }, "text");
 
   const showEye = useMemo(
     () => typeof onToggleSecure === "function",
@@ -51,7 +59,11 @@ export const AuthInput = forwardRef<TextInput, AuthInputProps>(function AuthInpu
           styles.input,
           isRtl ? styles.rtl : null,
           showEye ? styles.withIcon : null,
-          { backgroundColor, borderColor, color: textColor },
+          {
+            backgroundColor,
+            borderColor: errorMessage ? errorColor : borderColor,
+            color: textColor,
+          },
           style,
         ]}
         secureTextEntry={secureTextEntry}
@@ -67,6 +79,28 @@ export const AuthInput = forwardRef<TextInput, AuthInputProps>(function AuthInpu
             color={iconColor}
           />
         </Pressable>
+      ) : null}
+
+      {errorMessage ? (
+        <Text
+          style={[
+            styles.errorText,
+            isRtl ? styles.errorTextRtl : null,
+            { color: errorColor },
+          ]}
+        >
+          {errorMessage}
+        </Text>
+      ) : statusMessage ? (
+        <Text
+          style={[
+            styles.errorText,
+            isRtl ? styles.errorTextRtl : null,
+            { color: statusTone === "success" ? successColor : placeholderColor },
+          ]}
+        >
+          {statusMessage}
+        </Text>
       ) : null}
     </View>
   );
@@ -94,6 +128,15 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     justifyContent: "center",
+  },
+  errorText: {
+    fontFamily: Fonts.sansMedium,
+    fontSize: 12,
+    marginTop: 6,
+    paddingHorizontal: 4,
+  },
+  errorTextRtl: {
+    textAlign: "right",
   },
   rtl: {
     textAlign: "right",

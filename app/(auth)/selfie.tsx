@@ -1,20 +1,18 @@
-import React from "react";
 
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { CameraView } from "expo-camera";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { Alert, Pressable, View } from "react-native";
+import { Alert, View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { GradientButton } from "@/components/ui/gradient-button";
 import { useI18n } from "@/hooks/use-i18n";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { useSignupFlow } from "@/src/providers/SignupFlowProvider";
+import { isEmailAlreadyInUseError } from "@/src/services/auth.service";
 
 import { CaptureHeader } from "@/src/features/auth/components/CaptureHeader";
 import { CapturePermissionCard } from "@/src/features/auth/components/CapturePermissionCard";
@@ -26,9 +24,7 @@ export default function SelfieScreen() {
   const router = useRouter();
   const { register, registering } = useAuth();
   const insets = useSafeAreaInsets();
-  const surface = useThemeColor({}, "surface");
   const border = useThemeColor({}, "border");
-  const surfacePressed = useThemeColor({}, "surfacePressed");
   const textColor = useThemeColor({}, "text");
 
   const {
@@ -73,7 +69,11 @@ export default function SelfieScreen() {
       clear();
       router.replace("/(auth)/pending" as any);
     } catch (error) {
-      const message = error instanceof Error ? error.message : t("uploadFailed");
+      const message = isEmailAlreadyInUseError(error)
+        ? t("emailAlreadyRegistered")
+        : error instanceof Error
+          ? error.message
+          : t("uploadFailed");
       Alert.alert(t("error"), message || t("uploadFailed"));
     }
   };
@@ -150,24 +150,13 @@ export default function SelfieScreen() {
       <View style={[captureScreenStyles.actions, { paddingBottom: 30 + insets.bottom }]}>
         {photoUri ? (
           <View style={captureScreenStyles.row}>
-            <Pressable
+            <GradientButton
+              label={t("retake")}
               onPress={() => setPhotoUri(null)}
-              style={({ pressed }) => [
-                captureScreenStyles.secondary,
-                captureScreenStyles.secondaryWithIcon,
-                { backgroundColor: pressed ? surfacePressed : surface, borderColor: border },
-                pressed ? captureScreenStyles.pressed : null,
-              ]}
-            >
-              <MaterialIcons name="refresh" size={18} color={textColor} />
-              <ThemedText
-                type="defaultSemiBold"
-                style={captureScreenStyles.secondaryLabel}
-                numberOfLines={1}
-              >
-                {t("retake")}
-              </ThemedText>
-            </Pressable>
+              iconName="refresh"
+              variant="secondary"
+              style={captureScreenStyles.inlinePrimary}
+            />
             <GradientButton
               label={t("usePhoto")}
               onPress={() => void onUse()}

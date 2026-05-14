@@ -1,6 +1,6 @@
 import { useNavigation } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 
 import { LayoutChangeEvent, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -39,7 +39,7 @@ export default function SpendingInsightsScreen() {
       }
 
       event.preventDefault();
-      router.replace("/(tabs)" as any);
+      router.back();
     });
 
     return unsubscribe;

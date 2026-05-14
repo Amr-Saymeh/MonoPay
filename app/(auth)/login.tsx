@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
@@ -18,7 +18,7 @@ import { AuthFooterLink } from "@/src/features/auth/components/AuthFooterLink";
 import { AuthScreenHeader } from "@/src/features/auth/components/AuthScreenHeader";
 import { AuthScreenShell } from "@/src/features/auth/components/AuthScreenShell";
 import { authFormStyles } from "@/src/features/auth/styles/formScreens";
-import { isValidEmail } from "@/src/features/auth/utils/signupValidation";
+import { isValidEmail, sanitizeEmailInput } from "@/src/features/auth/utils/signupValidation";
 
 type LoginFormValues = {
   email: string;
@@ -38,16 +38,15 @@ export default function LoginScreen() {
   const emailRef = useRef<TextInput>(null);
   const pinRef = useRef<TextInput>(null);
 
-  const { control, handleSubmit, reset, watch } = useForm<LoginFormValues>({
+  const { control, formState, handleSubmit, reset } = useForm<LoginFormValues>({
     defaultValues: {
       email: "",
       pin: "",
     },
+    mode: "onChange",
   });
 
-  const emailValue = watch("email");
-  const pinValue = watch("pin");
-  const canSubmit = emailValue.trim().length > 0 && pinValue.trim().length > 0 && !signingIn;
+  const canSubmit = formState.isValid && !signingIn;
 
   useFocusEffect(
     useCallback(() => {
@@ -79,14 +78,15 @@ export default function LoginScreen() {
             control={control}
             name="email"
             rules={{
-              required: true,
-              validate: (value) => isValidEmail(value),
+              required: t("required"),
+              validate: (value) => isValidEmail(value) || t("invalidEmail"),
             }}
-            render={({ field: { onChange, value } }) => (
+            render={({ field: { onChange, value }, fieldState: { error } }) => (
               <AuthInput
                 ref={emailRef}
                 value={value}
-                onChangeText={onChange}
+                onChangeText={(text) => onChange(sanitizeEmailInput(text))}
+                errorMessage={error?.message}
                 placeholder={t("email")}
                 keyboardType="email-address"
                 textContentType="emailAddress"
@@ -101,14 +101,15 @@ export default function LoginScreen() {
             control={control}
             name="pin"
             rules={{
-              required: true,
-              validate: (value) => value.trim().length >= 6,
+              required: t("required"),
+              validate: (value) => value.trim().length >= 6 || t("pinTooShort"),
             }}
-            render={({ field: { onChange, value } }) => (
+            render={({ field: { onChange, value }, fieldState: { error } }) => (
               <AuthInput
                 ref={pinRef}
                 value={value}
                 onChangeText={onChange}
+                errorMessage={error?.message}
                 placeholder={t("pin")}
                 secureTextEntry={secure}
                 onToggleSecure={() => setSecure((current) => !current)}
@@ -124,7 +125,10 @@ export default function LoginScreen() {
 
           <GradientButton
             label={t("login")}
-            onPress={() => void onLogin()}
+            onPress={() => {
+              if (!canSubmit) return;
+              void onLogin();
+            }}
             disabled={!canSubmit}
             loading={signingIn}
           />

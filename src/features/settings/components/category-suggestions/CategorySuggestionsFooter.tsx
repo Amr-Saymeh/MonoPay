@@ -1,11 +1,10 @@
-import React from "react";
 
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { LinearGradient } from "expo-linear-gradient";
 import { Keyboard, Pressable, TextInput, View } from "react-native";
 import Animated, { FadeInUp } from "react-native-reanimated";
 
-import { ThemedText } from "@/components/themed-text";
+import { GradientButton } from "@/components/ui/gradient-button";
 
 import { styles } from "./styles";
 
@@ -94,25 +93,13 @@ export function CategorySuggestionsFooter({
         </Animated.View>
       ) : null}
 
-      <Pressable
-        disabled={adding ? ctaDisabled : saving}
+      <GradientButton
+        label={ctaLabel}
         onPress={onPrimaryPress}
-        style={({ pressed }) => [
-          styles.ctaWrap,
-          { shadowColor: ctaShadow },
-          (adding ? ctaDisabled : saving) ? styles.disabled : null,
-          pressed && !(adding ? ctaDisabled : saving) ? styles.pressed : null,
-        ]}
-      >
-        <LinearGradient
-          colors={isDark ? ["#8B5CF6", "#6D28D9"] : ["#6200EE", "#5000D0"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[styles.ctaBtn, isRtl ? styles.ctaBtnRtl : null]}
-        >
-          <ThemedText style={styles.ctaLabel}>{ctaLabel}</ThemedText>
-        </LinearGradient>
-      </Pressable>
+        disabled={adding ? ctaDisabled : saving}
+        loading={!adding && saving}
+        style={[styles.ctaWrap, { shadowColor: ctaShadow }] as any}
+      />
     </View>
   );
 }
