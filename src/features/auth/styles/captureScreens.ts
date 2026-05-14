@@ -38,11 +38,11 @@ export const captureScreenStyles = StyleSheet.create({
     alignSelf: "stretch",
   },
   inlinePrimary: {
-    flex: 1,
+    width: "100%",
     minHeight: 58,
+    minWidth: 0,
   },
   row: {
-    flexDirection: "row",
     gap: 12,
     alignItems: "stretch",
     justifyContent: "center",

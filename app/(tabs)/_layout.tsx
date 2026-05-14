@@ -1,7 +1,6 @@
 import { getFocusedRouteNameFromRoute } from "@react-navigation/native";
 import { BlurView } from "expo-blur";
 import { Tabs } from "expo-router";
-import React from "react";
 import { Platform, StyleSheet } from "react-native";
 
 import { HapticTab } from "@/components/haptic-tab";
@@ -15,7 +14,7 @@ export default function TabLayout() {
   const { colorScheme } = useThemeMode();
 
   const activeColor = colorScheme === "dark" ? "#a78bfa" : "#6e5da9";
-  const hiddenSettingsRoutes = new Set(["category-suggestions"]);
+  const hiddenSettingsRoutes = new Set(["category-suggestions", "avatar-camera"]);
 
   return (
     <Tabs

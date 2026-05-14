@@ -1,13 +1,11 @@
-import React from "react";
 
 import { CameraView } from "expo-camera";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { Pressable, View } from "react-native";
+import { View } from "react-native";
 import Animated, { FadeIn } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { GradientButton } from "@/components/ui/gradient-button";
 import { useI18n } from "@/hooks/use-i18n";
@@ -24,9 +22,7 @@ export default function IdScanScreen() {
   const router = useRouter();
   const { setIdentityImageUri } = useSignupFlow();
   const insets = useSafeAreaInsets();
-  const surface = useThemeColor({}, "surface");
   const border = useThemeColor({}, "border");
-  const surfacePressed = useThemeColor({}, "surfacePressed");
   const textColor = useThemeColor({}, "text");
 
   const { cameraRef, capturePhoto, capturing, permission, photoUri, requestPermission, setPhotoUri } =
@@ -112,22 +108,13 @@ export default function IdScanScreen() {
       <View style={[captureScreenStyles.actions, { paddingBottom: 30 + insets.bottom }]}>
         {photoUri ? (
           <View style={captureScreenStyles.row}>
-            <Pressable
+            <GradientButton
+              label={t("retake")}
               onPress={() => setPhotoUri(null)}
-              style={({ pressed }) => [
-                captureScreenStyles.secondary,
-                { backgroundColor: pressed ? surfacePressed : surface, borderColor: border },
-                pressed ? captureScreenStyles.pressed : null,
-              ]}
-            >
-              <ThemedText
-                type="defaultSemiBold"
-                style={captureScreenStyles.secondaryLabel}
-                numberOfLines={1}
-              >
-                {t("retake")}
-              </ThemedText>
-            </Pressable>
+              iconName="refresh"
+              variant="secondary"
+              style={captureScreenStyles.inlinePrimary}
+            />
             <GradientButton
               label={t("usePhoto")}
               onPress={onUse}

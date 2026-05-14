@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useRouter } from "expo-router";
 import { Controller, useForm, useWatch } from "react-hook-form";
@@ -18,10 +18,12 @@ import { AuthScreenShell } from "@/src/features/auth/components/AuthScreenShell"
 import { useAuthFormScreen } from "@/src/features/auth/hooks/useAuthFormScreen";
 import { authFormStyles } from "@/src/features/auth/styles/formScreens";
 import {
-    getSignupValidationError,
-    isValidEmail,
-    type SignupValues,
+  getSignupValidationError,
+  isValidEmail,
+  sanitizeEmailInput,
+  type SignupValues,
 } from "@/src/features/auth/utils/signupValidation";
+import { getEmailAvailability, type EmailAvailabilityStatus } from "@/src/services/auth.service";
 
 export default function SignupDetailsScreen() {
   const { t, isRtl } = useI18n();
@@ -33,6 +35,7 @@ export default function SignupDetailsScreen() {
   const [securePin, setSecurePin] = useState(true);
   const [secureConfirm, setSecureConfirm] = useState(true);
   const [continuing, setContinuing] = useState(false);
+  const [emailStatus, setEmailStatus] = useState<EmailAvailabilityStatus | "checking" | "idle">("idle");
 
   const { scrollRef, scrollToField } = useAuthFormScreen();
   const firstNameRef = useRef<TextInput>(null);
@@ -43,6 +46,7 @@ export default function SignupDetailsScreen() {
   const confirmPinRef = useRef<TextInput>(null);
   const addressRef = useRef<TextInput>(null);
   const identityNumberRef = useRef<TextInput>(null);
+  const emailCheckTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const defaultValues = useMemo<SignupValues>(
     () => ({
@@ -61,13 +65,80 @@ export default function SignupDetailsScreen() {
   const { control, formState, handleSubmit } = useForm<SignupValues>({
     defaultValues,
     mode: "onChange",
+    delayError: 350,
   });
 
-  const pinValue = useWatch({ control, name: "pin" });
-  const canContinue = formState.isValid && !continuing;
+  const formValues = useWatch({ control });
+  const pinValue = formValues.pin;
+  const currentValidationError = getSignupValidationError(
+    {
+      address: formValues.address ?? "",
+      confirmPin: formValues.confirmPin ?? "",
+      email: formValues.email ?? "",
+      firstName: formValues.firstName ?? "",
+      identityNumber: formValues.identityNumber ?? "",
+      lastName: formValues.lastName ?? "",
+      phone: formValues.phone ?? "",
+      pin: formValues.pin ?? "",
+    },
+    t,
+  );
+  const emailHasFormatError = Boolean(formState.errors.email);
+  const emailStatusMessage = emailHasFormatError
+    ? undefined
+    : emailStatus === "checking"
+      ? t("checkingEmail")
+      : emailStatus === "available"
+        ? t("emailAvailable")
+        : emailStatus === "exists"
+          ? t("emailAlreadyRegistered")
+          : undefined;
+  const canContinue =
+    !currentValidationError &&
+    !emailHasFormatError &&
+    emailStatus !== "exists" &&
+    emailStatus !== "checking" &&
+    !continuing;
 
-  const onContinue = handleSubmit((values) => {
-    if (continuing) return;
+  useEffect(() => {
+    let cancelled = false;
+
+    if (emailCheckTimeoutRef.current) {
+      clearTimeout(emailCheckTimeoutRef.current);
+      emailCheckTimeoutRef.current = null;
+    }
+
+    const email = (formValues.email ?? "").trim().toLowerCase();
+
+    if (!email.trim() || !isValidEmail(email)) {
+      setEmailStatus("idle");
+      return;
+    }
+
+    emailCheckTimeoutRef.current = setTimeout(() => {
+      setEmailStatus("checking");
+
+      void getEmailAvailability(email)
+        .then((status) => {
+          if (cancelled) return;
+
+          setEmailStatus(status);
+        });
+
+      emailCheckTimeoutRef.current = null;
+    }, 450);
+
+    return () => {
+      cancelled = true;
+
+      if (emailCheckTimeoutRef.current) {
+        clearTimeout(emailCheckTimeoutRef.current);
+      }
+    };
+  }, [formValues.email, t]);
+
+  const onContinue = handleSubmit(async (values) => {
+    if (continuing || emailStatus === "checking") return;
 
     const error = getSignupValidationError(
       {
@@ -88,6 +159,16 @@ export default function SignupDetailsScreen() {
       return;
     }
 
+    const availability = await getEmailAvailability(values.email);
+    if (availability === "exists") {
+      setEmailStatus("exists");
+      return;
+    }
+
+    if (availability === "available") {
+      setEmailStatus("available");
+    }
+
     clear();
     setDetails({
       firstName: values.firstName.trim(),
@@ -100,7 +181,9 @@ export default function SignupDetailsScreen() {
     });
 
     setContinuing(true);
-    router.push("/(tabs)/settings/category-suggestions" as any);
+    requestAnimationFrame(() => {
+      router.push("/(tabs)/settings/category-suggestions" as any);
+    });
   });
 
   return (
@@ -115,12 +198,16 @@ export default function SignupDetailsScreen() {
         <Controller
           control={control}
           name="firstName"
-          rules={{ required: true, validate: (value) => value.trim().length > 0 }}
-          render={({ field: { onChange, value } }) => (
+          rules={{
+            required: t("required"),
+            validate: (value) => value.trim().length > 0 || t("required"),
+          }}
+          render={({ field: { onChange, value }, fieldState: { error } }) => (
             <AuthInput
               ref={firstNameRef}
               value={value}
               onChangeText={onChange}
+              errorMessage={error?.message}
               placeholder={t("firstName")}
               autoCapitalize="words"
               returnKeyType="next"
@@ -133,12 +220,16 @@ export default function SignupDetailsScreen() {
         <Controller
           control={control}
           name="lastName"
-          rules={{ required: true, validate: (value) => value.trim().length > 0 }}
-          render={({ field: { onChange, value } }) => (
+          rules={{
+            required: t("required"),
+            validate: (value) => value.trim().length > 0 || t("required"),
+          }}
+          render={({ field: { onChange, value }, fieldState: { error } }) => (
             <AuthInput
               ref={lastNameRef}
               value={value}
               onChangeText={onChange}
+              errorMessage={error?.message}
               placeholder={t("lastName")}
               autoCapitalize="words"
               returnKeyType="next"
@@ -151,12 +242,18 @@ export default function SignupDetailsScreen() {
         <Controller
           control={control}
           name="email"
-          rules={{ required: true, validate: (value) => isValidEmail(value) }}
-          render={({ field: { onChange, value } }) => (
+          rules={{
+            required: t("required"),
+            validate: (value) => isValidEmail(value) || t("invalidEmail"),
+          }}
+          render={({ field: { onChange, value }, fieldState: { error } }) => (
             <AuthInput
               ref={emailRef}
               value={value}
-              onChangeText={onChange}
+              onChangeText={(text) => onChange(sanitizeEmailInput(text))}
+              errorMessage={error?.message}
+              statusMessage={emailStatusMessage}
+              statusTone={emailStatus === "available" ? "success" : "default"}
               placeholder={t("email")}
               keyboardType="email-address"
               textContentType="emailAddress"
@@ -171,12 +268,16 @@ export default function SignupDetailsScreen() {
         <Controller
           control={control}
           name="phone"
-          rules={{ required: true, validate: (value) => value.trim().length > 0 }}
-          render={({ field: { onChange, value } }) => (
+          rules={{
+            required: t("required"),
+            validate: (value) => value.trim().length > 0 || t("required"),
+          }}
+          render={({ field: { onChange, value }, fieldState: { error } }) => (
             <AuthInput
               ref={phoneRef}
               value={value}
               onChangeText={onChange}
+              errorMessage={error?.message}
               placeholder={t("phone")}
               keyboardType="phone-pad"
               textContentType="telephoneNumber"
@@ -190,12 +291,16 @@ export default function SignupDetailsScreen() {
         <Controller
           control={control}
           name="pin"
-          rules={{ required: true, validate: (value) => value.trim().length >= 6 }}
-          render={({ field: { onChange, value } }) => (
+          rules={{
+            required: t("required"),
+            validate: (value) => value.trim().length >= 6 || t("pinTooShort"),
+          }}
+          render={({ field: { onChange, value }, fieldState: { error } }) => (
             <AuthInput
               ref={pinRef}
               value={value}
               onChangeText={onChange}
+              errorMessage={error?.message}
               placeholder={t("pin")}
               secureTextEntry={securePin}
               onToggleSecure={() => setSecurePin((current) => !current)}
@@ -211,14 +316,19 @@ export default function SignupDetailsScreen() {
           control={control}
           name="confirmPin"
           rules={{
-            required: true,
-            validate: (value) => value.trim().length > 0 && value === pinValue,
+            deps: ["pin"],
+            required: t("required"),
+            validate: (value) => {
+              if (value.trim().length === 0) return t("required");
+              return value === pinValue || t("pinMismatch");
+            },
           }}
-          render={({ field: { onChange, value } }) => (
+          render={({ field: { onChange, value }, fieldState: { error } }) => (
             <AuthInput
               ref={confirmPinRef}
               value={value}
               onChangeText={onChange}
+              errorMessage={error?.message}
               placeholder={t("confirmPin")}
               secureTextEntry={secureConfirm}
               onToggleSecure={() => setSecureConfirm((current) => !current)}
@@ -233,12 +343,16 @@ export default function SignupDetailsScreen() {
         <Controller
           control={control}
           name="address"
-          rules={{ required: true, validate: (value) => value.trim().length > 0 }}
-          render={({ field: { onChange, value } }) => (
+          rules={{
+            required: t("required"),
+            validate: (value) => value.trim().length > 0 || t("required"),
+          }}
+          render={({ field: { onChange, value }, fieldState: { error } }) => (
             <AuthInput
               ref={addressRef}
               value={value}
               onChangeText={onChange}
+              errorMessage={error?.message}
               placeholder={t("address")}
               autoCapitalize="sentences"
               returnKeyType="next"
@@ -252,28 +366,38 @@ export default function SignupDetailsScreen() {
           control={control}
           name="identityNumber"
           rules={{
-            required: true,
-            validate: (value) => value.trim().length > 0 && Number.isFinite(Number(value)),
+            required: t("required"),
+            validate: (value) => {
+              if (value.trim().length === 0) return t("required");
+              return Number.isFinite(Number(value)) || t("invalidIdNumber");
+            },
           }}
-          render={({ field: { onChange, value } }) => (
+          render={({ field: { onChange, value }, fieldState: { error } }) => (
             <AuthInput
               ref={identityNumberRef}
               value={value}
               onChangeText={onChange}
+              errorMessage={error?.message}
               placeholder={t("idNumber")}
               keyboardType="number-pad"
               returnKeyType="done"
               onFocus={() => scrollToField(identityNumberRef)}
-              onSubmitEditing={() => void onContinue()}
+              onSubmitEditing={() => {
+                if (!canContinue) return;
+                void onContinue();
+              }}
             />
           )}
         />
 
         <GradientButton
           label={t("continue")}
-          onPress={() => void onContinue()}
+          onPress={() => {
+            if (!canContinue) return;
+            void onContinue();
+          }}
           disabled={!canContinue}
-          style={!canContinue ? { opacity: 0.6 } : undefined}
+          loading={continuing}
         />
       </Animated.View>
 
