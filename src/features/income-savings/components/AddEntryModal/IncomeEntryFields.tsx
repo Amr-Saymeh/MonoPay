@@ -1,28 +1,28 @@
 import { ThemedText } from "@/components/themed-text";
 import { useI18n } from "@/hooks/use-i18n";
+import { Controller, type Control } from "react-hook-form";
 import { TextInput } from "react-native";
 
+import type { IncomeSourceFormValues } from "../../constants";
 import { styles } from "./styles";
 
 type IncomeEntryFieldsProps = {
-  amount: string;
+  control: Control<IncomeSourceFormValues>;
   notes: string;
   isDark: boolean;
   inputBg: string;
   inputBorder: string;
   inputColor: string;
-  onAmountChange: (value: string) => void;
   onNotesChange: (value: string) => void;
 };
 
 export function IncomeEntryFields({
-  amount,
+  control,
   notes,
   isDark,
   inputBg,
   inputBorder,
   inputColor,
-  onAmountChange,
   onNotesChange,
 }: IncomeEntryFieldsProps) {
   const { t } = useI18n();
@@ -33,20 +33,47 @@ export function IncomeEntryFields({
       <ThemedText style={styles.modalLabel}>
         {t("incomeSavings.modal.amount")}
       </ThemedText>
-      <TextInput
-        value={amount}
-        onChangeText={onAmountChange}
-        keyboardType="numeric"
-        placeholder="0.00"
-        placeholderTextColor={placeholderColor}
-        style={[
-          styles.input,
-          {
-            backgroundColor: inputBg,
-            borderColor: inputBorder,
-            color: inputColor,
+      <Controller
+        control={control}
+        name="amount"
+        rules={{
+          required: t("incomeSavings.invalidAmountDescription"),
+          validate: (value) => {
+            const amountNum = Number(value);
+            return (
+              (Number.isFinite(amountNum) && amountNum > 0) ||
+              t("incomeSavings.invalidAmountDescription")
+            );
           },
-        ]}
+        }}
+        render={({
+          field: { value, onChange, onBlur },
+          fieldState: { error, invalid },
+        }) => (
+          <>
+            <TextInput
+              value={value}
+              onBlur={onBlur}
+              onChangeText={onChange}
+              keyboardType="numeric"
+              placeholder="0.00"
+              placeholderTextColor={placeholderColor}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: inputBg,
+                  borderColor: invalid ? "#EF4444" : inputBorder,
+                  color: inputColor,
+                },
+              ]}
+            />
+            {invalid && (
+              <ThemedText style={styles.fieldError}>
+                {error?.message}
+              </ThemedText>
+            )}
+          </>
+        )}
       />
 
       <ThemedText style={styles.modalLabel}>

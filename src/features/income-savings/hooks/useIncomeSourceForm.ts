@@ -22,7 +22,7 @@ export function useIncomeSourceForm(params: {
   const { userUid, selectedSourceTypeFilter, t, showSuccess, showError } =
     params;
   const [sourceModalVisible, setSourceModalVisible] = useState(false);
-  const { watch, setValue, reset, handleSubmit } =
+  const { control, watch, setValue, reset, handleSubmit } =
     useForm<IncomeSourceFormValues>({
       mode: "all",
       defaultValues: {
@@ -132,6 +132,7 @@ export function useIncomeSourceForm(params: {
 
   return {
     ...data,
+    control,
     sourceModalVisible,
     setSourceModalVisible,
     type,

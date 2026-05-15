@@ -1,7 +1,6 @@
 import { getFocusedRouteNameFromRoute } from "@react-navigation/native";
 import { BlurView } from "expo-blur";
 import { Tabs } from "expo-router";
-import React from "react";
 import { Platform, StyleSheet } from "react-native";
 
 import { HapticTab } from "@/components/haptic-tab";
@@ -21,21 +20,24 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: activeColor,
-        tabBarInactiveTintColor: colorScheme === "dark" ? "rgba(255, 255, 255, 0.4)" : "rgba(0, 0, 0, 0.4)",
+        tabBarInactiveTintColor:
+          colorScheme === "dark"
+            ? "rgba(255, 255, 255, 0.4)"
+            : "rgba(0, 0, 0, 0.4)",
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarStyle: styles.tabBar,
         tabBarBackground: () => (
           <BlurView
             tint={colorScheme === "dark" ? "dark" : "light"}
-            intensity={Platform.OS === 'ios' ? 40 : 80}
+            intensity={Platform.OS === "ios" ? 40 : 80}
             style={StyleSheet.absoluteFill}
           />
         ),
         tabBarLabelStyle: {
           fontFamily: Fonts.sans,
           fontSize: 11,
-          fontWeight: '600',
+          fontWeight: "600",
         },
       }}
     >
@@ -75,21 +77,23 @@ export default function TabLayout() {
         name="create"
         options={{
           href: null,
+          tabBarStyle: { display: "none" },
         }}
       />
       <Tabs.Screen
         name="goals"
         options={{
           href: null,
+          tabBarStyle: { display: "none" },
         }}
       />
-      
+
       <Tabs.Screen
         name="income-savings"
         options={{
           href: null,
           tabBarStyle: { display: "none" },
-        }} 
+        }}
       />
       <Tabs.Screen
         name="spending-insights"
@@ -102,12 +106,12 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    position: 'absolute',
+    position: "absolute",
     borderTopWidth: 0,
     elevation: 0,
     height: 64,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    bottom: Platform.OS === 'ios' ? 24 : 12,
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    bottom: Platform.OS === "ios" ? 24 : 12,
     marginHorizontal: 20,
     borderRadius: 32,
     shadowColor: "#000",
@@ -115,6 +119,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 15,
     paddingBottom: 0,
-    overflow: 'hidden',
-  }
+    overflow: "hidden",
+  },
 });
