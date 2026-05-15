@@ -1,17 +1,25 @@
-import React from 'react';
-import { StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import React from 'react';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 interface RateInfoProps {
   fromCurrency: string;
   toCurrency: string;
   rate: number | null;
+  loading?: boolean;
 }
 
-export const RateInfo: React.FC<RateInfoProps> = ({ fromCurrency, toCurrency, rate }) => {
+export const RateInfo: React.FC<RateInfoProps> = ({ fromCurrency, toCurrency, rate, loading }) => {
   const iconColor = useThemeColor({}, 'icon');
 
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="small" color={iconColor} />
+      </View>
+    );
+  }
   if (!rate) return null;
 
   return (
