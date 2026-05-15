@@ -3,7 +3,6 @@ import { ThemedView } from "@/components/themed-view";
 import { Fonts } from "@/constants/theme";
 import { useI18n } from "@/hooks/use-i18n";
 import { useThemeColor } from "@/hooks/use-theme-color";
-import React from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { SharedLog, UserProfile } from "../types";
 import { HistoryRow } from "./HistoryRow";

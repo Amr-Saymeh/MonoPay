@@ -1,6 +1,5 @@
 import { ThemedText } from "@/components/themed-text";
 import { Fonts } from "@/constants/theme";
-import React from "react";
 import { Animated, StyleSheet, View } from "react-native";
 import { useAnimatedListItem } from "../hooks";
 import { SharedLog } from "../types";

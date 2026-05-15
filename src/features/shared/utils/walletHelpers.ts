@@ -1,11 +1,3 @@
-export function formatCurrency(code: string) {
-  return code.trim().toUpperCase();
-}
-
-export function formatAmount(value: number) {
-  return Number(value).toFixed(2);
-}
-
 export function getTotalBalance(currancies?: Record<string, number>) {
   return Object.values(currancies ?? {}).reduce((sum, value) => {
     const amount = Number(value);
