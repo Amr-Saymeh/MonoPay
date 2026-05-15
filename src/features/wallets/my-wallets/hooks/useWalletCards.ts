@@ -49,7 +49,7 @@ export function useWalletCards({ userId }: UseWalletCardsParams) {
       const walletKey = `${walletId}`;
 
       return onValue(
-        ref(db, `wallets/${walletKey}`),
+        ref(db, `wallets/wallet${walletKey}`),
         (snapshot) => {
           const value = snapshot.val() as WalletRecord | null;
           setWallets((current) => {

@@ -7,8 +7,9 @@ export const styles = StyleSheet.create({
   container: {
     backgroundColor: CARD_BG,
     borderRadius: 24,
-    height: 240,
-    padding: 16,
+    minHeight: 260,
+    paddingVertical: 5,
+    paddingHorizontal: 20,
     overflow: 'hidden',
     borderWidth: 0.5,
     borderColor: 'rgba(255,255,255,0.1)',
@@ -162,7 +163,7 @@ export const styles = StyleSheet.create({
   divider: {
     height: 0.5,
     backgroundColor: 'rgba(255,255,255,0.08)',
-    marginVertical: 5,
+    marginVertical: 12,
   },
 
   // Footer

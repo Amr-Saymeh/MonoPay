@@ -14,14 +14,15 @@ export function formatCurrency(code: string) {
   return code.trim().toUpperCase();
 }
 
-export function getBalances(currancies: Record<string, number> | undefined) {
-  return Object.entries(currancies ?? {})
+export function getBalances(wallet?: WalletRecord) {
+  const data = wallet?.currencies || wallet?.currancies || {};
+  return Object.entries(data)
     .filter(([key, value]) => key && Number.isFinite(Number(value)))
     .sort(([a], [b]) => a.localeCompare(b));
 }
 
 export function buildWalletBalances(wallet?: WalletRecord) {
-  return getBalances(wallet?.currancies).map(([code, amount]) => ({
+  return getBalances(wallet).map(([code, amount]) => ({
     code,
     balance: Number(amount),
   }));

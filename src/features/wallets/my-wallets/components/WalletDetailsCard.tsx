@@ -10,7 +10,7 @@ import { useI18n } from "@/hooks/use-i18n";
 import { useUserLabel } from "@/hooks/use-user-label";
 import { styles } from "../styles";
 import type { WalletCard } from "../types";
-import { formatCurrency } from "../utils";
+import { formatCurrency, getBalances } from "../utils";
 
 type WalletDetailsCardProps = {
   deleting: boolean;
@@ -79,8 +79,8 @@ export function WalletDetailsCard({
       <View style={styles.detailRow}>
         <ThemedText style={styles.detailLabel}>{t("walletCurrencies")}</ThemedText>
         <ThemedText type="defaultSemiBold" style={styles.detailValue}>
-          {Object.keys(selected?.wallet?.currancies ?? {}).length > 0
-            ? Object.entries(selected?.wallet?.currancies ?? {})
+          {getBalances(selected?.wallet).length > 0
+            ? getBalances(selected?.wallet)
                 .map(([code, amount]) => `${formatCurrency(code)}: ${amount}`)
                 .join("  ")
             : "—"}
