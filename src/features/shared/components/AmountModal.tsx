@@ -5,18 +5,18 @@ import { Fonts } from "@/constants/theme";
 import { useI18n } from "@/hooks/use-i18n";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import React from "react";
 import {
-    InputAccessoryView,
-    Keyboard,
-    Modal,
-    Platform,
-    Pressable,
-    StyleSheet,
-    TextInput,
-    TouchableOpacity,
-    View,
+  InputAccessoryView,
+  Keyboard,
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
+import { formatAmount, formatCurrency } from "../utils/formatters";
 
 interface AmountModalProps {
   visible: boolean;
@@ -32,14 +32,6 @@ interface AmountModalProps {
   saving: boolean;
   onConfirm: () => void;
   availableBalance?: number;
-}
-
-function formatCurrency(code: string) {
-  return code.trim().toUpperCase();
-}
-
-function formatAmount(value: number) {
-  return Number(value).toFixed(2);
 }
 
 export function AmountModal({
@@ -58,39 +50,36 @@ export function AmountModal({
   availableBalance,
 }: AmountModalProps) {
   const { t } = useI18n();
-  const backgroundColor = useThemeColor({}, 'background');
-  const surfaceColor = useThemeColor({}, 'surface');
-  const textColor = useThemeColor({}, 'text');
-  const borderColor = useThemeColor({}, 'border');
-  const tintColor = useThemeColor({}, 'tint');
-  const inputBackgroundColor = useThemeColor({}, 'inputBackground');
-  const inputBorderColor = useThemeColor({}, 'inputBorder');
+  const backgroundColor = useThemeColor({}, "background");
+  const surfaceColor = useThemeColor({}, "surface");
+  const textColor = useThemeColor({}, "text");
+  const borderColor = useThemeColor({}, "border");
+  const tintColor = useThemeColor({}, "tint");
+  const inputBackgroundColor = useThemeColor({}, "inputBackground");
+  const inputBorderColor = useThemeColor({}, "inputBorder");
+  const placeholderColor = useThemeColor({}, "placeholder");
 
   const showBalanceInfo = !isAdd && amountCurrency && availableBalance !== undefined;
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.modalOverlay} onPress={onClose}>
-        <Pressable style={[styles.modalCard, { backgroundColor }]} onPress={(e) => e.stopPropagation()}>
+        <Pressable
+          style={[styles.modalCard, { backgroundColor }]}
+          onPress={(e) => e.stopPropagation()}
+        >
           <View style={[styles.modalHandle, { backgroundColor: borderColor }]} />
 
           <ThemedText type="subtitle" style={styles.modalTitle}>
             {isAdd ? t("addMoney") : t("spendMoney")}
           </ThemedText>
 
-          {/* Balance info for remove */}
+          {/* Available balance info (spend mode only) */}
           {showBalanceInfo && (
             <View style={styles.balanceInfoContainer}>
-              <ThemedText style={styles.balanceInfoLabel}>
-                {t("availableBalance")}
-              </ThemedText>
+              <ThemedText style={styles.balanceInfoLabel}>{t("availableBalance")}</ThemedText>
               <ThemedText style={styles.balanceInfoValue}>
-                {formatAmount(availableBalance)} {formatCurrency(amountCurrency)}
+                {formatAmount(availableBalance!)} {formatCurrency(amountCurrency!)}
               </ThemedText>
             </View>
           )}
@@ -104,12 +93,11 @@ export function AmountModal({
             inputAccessoryViewID="amount_input_accessory"
           />
 
-          <ThemedText style={[styles.sectionTitle, { marginTop: 6 }]}>
-            {t("currency")}
-          </ThemedText>
+          <ThemedText style={[styles.sectionTitle, { marginTop: 6 }]}>{t("currency")}</ThemedText>
           <View style={styles.currencyChipsRow}>
             {availableCurrencies.map((code) => {
-              const isSelected = formatCurrency(amountCurrency ?? "") === formatCurrency(code);
+              const isSelected =
+                formatCurrency(amountCurrency ?? "") === formatCurrency(code);
               return (
                 <TouchableOpacity
                   activeOpacity={0.8}
@@ -117,12 +105,18 @@ export function AmountModal({
                   onPress={() => onCurrencyChange(code)}
                   style={[
                     styles.currencyChip,
-                    { borderColor: borderColor, backgroundColor: surfaceColor },
-                    isSelected && [styles.currencyChipSelected, { borderColor: tintColor, backgroundColor: `${tintColor}15` }],
+                    { borderColor, backgroundColor: surfaceColor },
+                    isSelected && [
+                      styles.currencyChipSelected,
+                      { borderColor: tintColor, backgroundColor: `${tintColor}15` },
+                    ],
                   ]}
                 >
                   <ThemedText
-                    style={[styles.currencyChipText, isSelected && [styles.currencyChipTextSelected, { color: tintColor }]]}
+                    style={[
+                      styles.currencyChipText,
+                      isSelected && [styles.currencyChipTextSelected, { color: tintColor }],
+                    ]}
                   >
                     {formatCurrency(code)}
                   </ThemedText>
@@ -138,8 +132,11 @@ export function AmountModal({
             value={amountReason}
             onChangeText={onReasonChange}
             placeholder={t("reasonPlaceholder")}
-            placeholderTextColor={useThemeColor({}, 'placeholder')}
-            style={[styles.noteInput, { backgroundColor: inputBackgroundColor, borderColor: inputBorderColor, color: textColor }]}
+            placeholderTextColor={placeholderColor}
+            style={[
+              styles.noteInput,
+              { backgroundColor: inputBackgroundColor, borderColor: inputBorderColor, color: textColor },
+            ]}
             multiline
             inputAccessoryViewID="note_input_accessory"
           />
@@ -156,7 +153,11 @@ export function AmountModal({
             activeOpacity={0.8}
             onPress={onClose}
             disabled={saving}
-            style={[styles.modalSecondaryButton, { backgroundColor, borderColor }, saving && styles.disabledButton]}
+            style={[
+              styles.modalSecondaryButton,
+              { backgroundColor, borderColor },
+              saving && styles.disabledButton,
+            ]}
           >
             <ThemedText style={styles.modalSecondaryText}>{t("cancel") ?? "Cancel"}</ThemedText>
           </TouchableOpacity>
@@ -164,23 +165,23 @@ export function AmountModal({
       </Pressable>
 
       {Platform.OS === "ios" && (
-  <>
-    <InputAccessoryView nativeID="amount_input_accessory">
-      <View style={[styles.inputAccessory, { backgroundColor: surfaceColor, borderTopColor: borderColor }]}>
-        <TouchableOpacity activeOpacity={0.8} onPress={() => Keyboard.dismiss()}>
-          <MaterialIcons name="check-circle" size={28} color="#a855f7" />
-        </TouchableOpacity>
-      </View>
-    </InputAccessoryView>
-    <InputAccessoryView nativeID="note_input_accessory">
-      <View style={[styles.inputAccessory, { backgroundColor: surfaceColor, borderTopColor: borderColor }]}>
-        <TouchableOpacity activeOpacity={0.8} onPress={() => Keyboard.dismiss()}>
-          <MaterialIcons name="check-circle" size={28} color="#a855f7" />
-        </TouchableOpacity>
-      </View>
-    </InputAccessoryView>
-  </>
-)}
+        <>
+          <InputAccessoryView nativeID="amount_input_accessory">
+            <View style={[styles.inputAccessory, { backgroundColor: surfaceColor, borderTopColor: borderColor }]}>
+              <TouchableOpacity activeOpacity={0.8} onPress={() => Keyboard.dismiss()}>
+                <MaterialIcons name="check-circle" size={28} color="#a855f7" />
+              </TouchableOpacity>
+            </View>
+          </InputAccessoryView>
+          <InputAccessoryView nativeID="note_input_accessory">
+            <View style={[styles.inputAccessory, { backgroundColor: surfaceColor, borderTopColor: borderColor }]}>
+              <TouchableOpacity activeOpacity={0.8} onPress={() => Keyboard.dismiss()}>
+                <MaterialIcons name="check-circle" size={28} color="#a855f7" />
+              </TouchableOpacity>
+            </View>
+          </InputAccessoryView>
+        </>
+      )}
     </Modal>
   );
 }
@@ -189,7 +190,7 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "flex-end"
+    justifyContent: "flex-end",
   },
   modalCard: {
     borderTopLeftRadius: 28,
@@ -215,38 +216,14 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  balanceInfoLabel: {
-     fontSize: 13,
-     opacity: 0.7
-    },
-  balanceInfoValue: {
-    fontSize: 14,
-    fontFamily: Fonts.sansBold,
-    color: "#7c3aed"
-  },
-  sectionTitle: {
-    opacity: 0.65,
-    fontFamily: Fonts.sansBold
-  },
-  currencyChipsRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 6
-  },
-  currencyChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    borderWidth: 1,
-  },
-  currencyChipSelected: {
-  },
-  currencyChipText: {
-    fontSize: 13,
-  },
-  currencyChipTextSelected: {
-  },
+  balanceInfoLabel: { fontSize: 13, opacity: 0.7 },
+  balanceInfoValue: { fontSize: 14, fontFamily: Fonts.sansBold, color: "#7c3aed" },
+  sectionTitle: { opacity: 0.65, fontFamily: Fonts.sansBold },
+  currencyChipsRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 6 },
+  currencyChip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, borderWidth: 1 },
+  currencyChipSelected: {},
+  currencyChipText: { fontSize: 13 },
+  currencyChipTextSelected: {},
   noteInput: {
     borderWidth: 1,
     borderRadius: 14,
@@ -255,9 +232,7 @@ const styles = StyleSheet.create({
     minHeight: 80,
     textAlignVertical: "top",
   },
-  modalPrimaryButton: {
-    marginTop: 16
-  },
+  modalPrimaryButton: { marginTop: 16 },
   modalSecondaryButton: {
     height: 48,
     borderRadius: 14,
@@ -266,12 +241,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginTop: 10,
   },
-  modalSecondaryText: {
-    fontFamily: Fonts.sansBold
-  },
-  disabledButton: {
-    opacity: 0.5
-  },
+  modalSecondaryText: { fontFamily: Fonts.sansBold },
+  disabledButton: { opacity: 0.5 },
   inputAccessory: {
     alignItems: "flex-end",
     paddingHorizontal: 16,

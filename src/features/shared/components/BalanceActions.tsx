@@ -2,7 +2,6 @@ import { ThemedText } from "@/components/themed-text";
 import { Fonts } from "@/constants/theme";
 import { useI18n } from "@/hooks/use-i18n";
 import { useThemeColor } from "@/hooks/use-theme-color";
-import React from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 
 interface BalanceActionsProps {

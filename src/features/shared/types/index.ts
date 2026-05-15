@@ -1,3 +1,8 @@
+import type { TranslationKey } from '@/src/i18n/translations';
+
+/** Matches `useI18n().t` — typed translation lookup for this feature. */
+export type TranslateFn = (key: TranslationKey) => string;
+
 export type WalletRecord = {
   id?: number;
   state?: string;

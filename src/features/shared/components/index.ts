@@ -4,3 +4,4 @@ export { MemberSection } from "./MemberSection";
 export { BalanceActions } from "./BalanceActions";
 export { HistorySection } from "./HistorySection";
 export { AmountModal } from "./AmountModal";
+export { SharedWalletCard } from "./SharedWalletCard";

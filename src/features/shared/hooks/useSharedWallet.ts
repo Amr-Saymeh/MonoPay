@@ -1,9 +1,18 @@
-import { db } from "@/src/firebaseConfig";
-import { onValue, ref } from "firebase/database";
-import { useEffect, useState } from "react";
-import { WalletRecord } from "../types";
+/**
+ * useSharedWallet.ts
+ *
+ * SRP: Subscribes to wallet data (members, goal, balances) and the wallet's
+ *      display name from the user's own profile.
+ *
+ * DIP: Reads via ISharedWalletRepository — no direct Firebase import.
+ */
 
-interface UseSharedWalletResult {
+import { useEffect, useState } from 'react';
+
+import { useSharedWalletRepository } from '../context/SharedWalletRepositoryContext';
+import { WalletRecord } from '../types';
+
+export interface UseSharedWalletResult {
   wallet: WalletRecord | null;
   loading: boolean;
   name: string;
@@ -14,70 +23,44 @@ interface UseSharedWalletResult {
 
 export function useSharedWallet(
   user: { uid: string } | null,
-  walletId: number
+  walletId: number,
 ): UseSharedWalletResult {
+  const repository = useSharedWalletRepository();
   const [wallet, setWallet] = useState<WalletRecord | null>(null);
   const [loading, setLoading] = useState(true);
-  const [name, setName] = useState("");
-  const [goal, setGoal] = useState("");
+  const [name, setName] = useState('');
+  const [goal, setGoal] = useState('');
   const [memberUids, setMemberUids] = useState<string[]>([]);
 
+  // Subscribe to the user's wallet-link (to get the wallet display name).
   useEffect(() => {
     if (!user || !Number.isFinite(walletId)) {
-      setName("");
+      setName('');
       return;
     }
+    return repository.subscribeToWalletName(user.uid, walletId, setName);
+  }, [repository, user, walletId]);
 
-    const unsub = onValue(
-      ref(db, `users/${user.uid}/userwallet`),
-      (snap) => {
-        const links = (snap.val() ?? {}) as Record<
-          string,
-          { walletid?: number; name?: string }
-        >;
-
-        const link = Object.values(links).find(
-          (item) => Number(item?.walletid) === walletId,
-        );
-
-        const label = link?.name?.trim();
-        setName(label && label.length > 0 ? label : `Wallet ${walletId}`);
-      },
-      () => {
-        setName(`Wallet ${walletId}`);
-      },
-    );
-
-    return () => unsub();
-  }, [user, walletId]);
-
+  // Subscribe to the live wallet document.
   useEffect(() => {
     if (!user || !Number.isFinite(walletId)) {
       setLoading(false);
       return;
     }
-    const walletKey = `wallet${walletId}`;
-    const unsub = onValue(
-      ref(db, `wallets/${walletKey}`),
-      (snap) => {
-        const value = (snap.val() ?? null) as WalletRecord | null;
-        if (!value || String(value.type ?? "") !== "shared") {
-          setWallet(null);
-          setLoading(false);
-          return;
-        }
+
+    return repository.subscribeToWallet(
+      walletId,
+      (value) => {
         setWallet(value);
-        setGoal(value.goal ?? "");
-        setMemberUids(Object.keys(value.members ?? {}));
+        if (value) {
+          setGoal(value.goal ?? '');
+          setMemberUids(Object.keys(value.members ?? {}));
+        }
         setLoading(false);
       },
-      () => {
-        setWallet(null);
-        setLoading(false);
-      }
+      () => setLoading(false),
     );
-    return () => unsub();
-  }, [user, walletId]);
+  }, [repository, user, walletId]);
 
   return { wallet, loading, name, goal, memberUids, setGoal };
 }

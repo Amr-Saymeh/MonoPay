@@ -2,7 +2,6 @@ import { ThemedText } from "@/components/themed-text";
 import { Fonts } from "@/constants/theme";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { LinearGradient } from "expo-linear-gradient";
-import React from "react";
 import { Animated, StyleSheet, TouchableOpacity, View } from "react-native";
 import { useAnimatedListItem } from "../hooks";
 import { UserProfile } from "../types";

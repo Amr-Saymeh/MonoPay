@@ -1,23 +1,26 @@
-import { useState, useCallback } from "react";
-import { ref, runTransaction, update, push } from "firebase/database";
-import { db } from "@/src/firebaseConfig";
-import { Alert } from "react-native";
+import { useCallback, useState } from 'react';
 
-interface UseAmountTransactionProps {
+import { useSharedWalletRepository } from '../context/SharedWalletRepositoryContext';
+import type { TranslateFn } from '../types';
+import { formatCurrency } from '../utils/formatters';
+
+export interface UseAmountTransactionProps {
   user: { uid: string } | null;
   walletId: number;
-  t: (key: string) => string | undefined;
+  t: TranslateFn;
   onSuccess: () => void;
+  /** OCP extension point — called after a successful commit with the result. */
+  onAfterCommit?: (result: { currentBalance: number; newBalance: number }) => void;
 }
 
-interface ExecuteParams {
+export interface ExecuteParams {
   amount: string;
   currency: string | null;
   reason: string;
   isAdd: boolean;
 }
 
-interface TransactionResult {
+export interface TransactionResult {
   success: boolean;
   currentBalance?: number;
   newBalance?: number;
@@ -29,123 +32,82 @@ export function useAmountTransaction({
   walletId,
   t,
   onSuccess,
+  onAfterCommit,
 }: UseAmountTransactionProps) {
+  const repository = useSharedWalletRepository();
   const [saving, setSaving] = useState(false);
 
+  /** Parses a user-typed amount string into a finite positive number, or NaN. */
   const parseAmount = useCallback((value: string): number => {
-    const normalized = value.replace(",", ".").trim();
+    const normalized = value.replace(',', '.').trim();
     const parsed = Number(normalized);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : NaN;
-  }, []);
-
-  const formatCurrency = useCallback((code: string): string => {
-    return code.trim().toUpperCase();
   }, []);
 
   const execute = useCallback(
     async (params: ExecuteParams): Promise<TransactionResult> => {
       if (!user || !Number.isFinite(walletId)) {
-        return { success: false, error: "Invalid user or wallet" };
+        return { success: false, error: 'Invalid user or wallet' };
       }
 
       const value = parseAmount(params.amount);
       if (Number.isNaN(value)) {
-        return {
-          success: false,
-          error: t("invalidAmount") ?? "Enter a valid amount.",
-        };
+        return { success: false, error: t('invalidAmount') ?? 'Enter a valid amount.' };
       }
 
       if (!params.currency) {
-        return {
-          success: false,
-          error: t("selectCurrency") ?? "Please select a currency.",
-        };
+        return { success: false, error: t('selectCurrency') ?? 'Please select a currency.' };
       }
 
-      const walletKey = `wallet${walletId}`;
-      const key = formatCurrency(params.currency);
       const delta = params.isAdd ? value : -value;
-      const currencyRef = ref(db, `wallets/${walletKey}/currancies/${key}`);
 
       setSaving(true);
-
       try {
-        let currentBalance = 0;
-        let newBalance = 0;
-        let transactionCommitted = false;
-
-        const result = await runTransaction(currencyRef, (currentValue) => {
-          currentBalance = Number(currentValue) || 0;
-          newBalance = currentBalance + delta;
-
-          if (newBalance < 0) {
-            return undefined; // Abort transaction
-          }
-
-          transactionCommitted = true;
-          return newBalance;
+        const result = await repository.runAmountTransaction(walletId, {
+          uid: user.uid,
+          amount: delta,
+          currency: formatCurrency(params.currency),
+          reason: params.reason,
         });
 
-        if (!result.committed) {
-          return {
-            success: false,
-            error: t("insufficientFunds") ?? "Not enough balance.",
-            currentBalance,
-          };
+        if (!result.success) {
+          const errorKey = result.error === 'insufficient_funds' ? 'insufficientFunds' : 'failed';
+          return { ...result, error: t(errorKey) ?? result.error };
         }
 
-        // Log the transaction
-        const logsRef = ref(db, `wallets/${walletKey}/sharedLogs`);
-        const logRef = push(logsRef);
-        await update(ref(db), {
-          [`wallets/${walletKey}/sharedLogs/${logRef.key}`]: {
-            userUid: user.uid,
-            amount: delta,
-            currency: key,
-            reason: params.reason.trim() || (params.isAdd ? "Add money" : "Spend"),
-            createdAt: Date.now(),
-          },
-        });
-
         onSuccess();
-        return { success: true, currentBalance, newBalance };
-      } catch (e) {
-        console.error("[useAmountTransaction] Error:", e);
-        return {
-          success: false,
-          error: e instanceof Error ? e.message : "Transaction failed",
-        };
+        onAfterCommit?.({ currentBalance: result.currentBalance!, newBalance: result.newBalance! });
+        return result;
       } finally {
         setSaving(false);
       }
     },
-    [user, walletId, t, onSuccess, parseAmount, formatCurrency]
+    [repository, user, walletId, t, onSuccess, onAfterCommit, parseAmount],
   );
 
   const getAvailableBalance = useCallback(
     async (currency: string | null): Promise<number> => {
       if (!user || !Number.isFinite(walletId) || !currency) return 0;
-
       try {
-        const { get } = await import("firebase/database");
-        const walletKey = `wallet${walletId}`;
-        const key = formatCurrency(currency);
-        const snap = await get(
-          ref(db, `wallets/${walletKey}/currancies/${key}`)
-        );
-        return Number(snap.val()) || 0;
+        // Re-uses the repo's one-off read via subscribeToWallet would be wasteful;
+        // a direct balance fetch is appropriate here. We read once from the repo
+        // by temporarily subscribing and immediately unsubscribing.
+        return await new Promise((resolve) => {
+          const unsub = repository.subscribeToWallet(
+            walletId,
+            (wallet) => {
+              const key = formatCurrency(currency);
+              resolve(Number(wallet?.currancies?.[key]) || 0);
+              unsub();
+            },
+          );
+        });
       } catch {
         return 0;
       }
     },
-    [user, walletId, formatCurrency]
+    [repository, user, walletId],
   );
 
-  return {
-    saving,
-    execute,
-    getAvailableBalance,
-    parseAmount,
-  };
+  return { saving, execute, getAvailableBalance, parseAmount };
 }

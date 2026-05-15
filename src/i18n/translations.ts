@@ -1,6 +1,6 @@
 export type SupportedLanguage = "en" | "ar";
 
-type TranslationKey =
+export type TranslationKey =
   | "appName"
   | "home"
   | "explore"
@@ -45,9 +45,13 @@ type TranslationKey =
   | "cannotDeleteMainWallet"
   | "walletNotFound"
   | "onlyOwnerCanDelete"
+  | "onlyOwnerCanEdit"
+  | "changesSaved"
   | "walletNameRequired"
   | "invalidExpiry"
   | "invalidAmount"
+  | "selectCurrency"
+  | "failed"
   | "duplicateCurrency"
   | "approve"
   | "settings"
@@ -125,6 +129,7 @@ type TranslationKey =
   | "approveUserTitle"
   | "rejectUserTitle"
   | "cancel"
+  | "back"
   | "advertisement"
   | "goodEvening"
   | "welcomeBack"
@@ -447,9 +452,13 @@ export const translations: Record<
     cannotDeleteMainWallet: "You can't delete the Main wallet",
     walletNotFound: "Wallet not found",
     onlyOwnerCanDelete: "Only the owner can delete this shared wallet",
+    onlyOwnerCanEdit: "Only the owner can edit this wallet.",
+    changesSaved: "Changes saved.",
     walletNameRequired: "Wallet name is required",
     invalidExpiry: "Invalid expiry date (use MM/YY)",
     invalidAmount: "Invalid amount",
+    selectCurrency: "Please select a currency.",
+    failed: "Something went wrong. Please try again.",
     duplicateCurrency: "Duplicate currency",
     approve: "Approve",
     settings: "Settings",
@@ -527,6 +536,7 @@ export const translations: Record<
     approveUserTitle: "Approve user",
     rejectUserTitle: "Reject user",
     cancel: "Cancel",
+    back: "Back",
     advertisement: "Advertisement",
     goodEvening: "Good Evening",
     welcomeBack: "Welcome back,",
@@ -847,9 +857,13 @@ export const translations: Record<
     cannotDeleteMainWallet: "لا يمكنك حذف المحفظة الرئيسية",
     walletNotFound: "لم يتم العثور على المحفظة",
     onlyOwnerCanDelete: "فقط المالك يمكنه حذف هذه المحفظة المشتركة",
+    onlyOwnerCanEdit: "فقط المالك يمكنه تعديل هذه المحفظة.",
+    changesSaved: "تم حفظ التغييرات.",
     walletNameRequired: "اسم المحفظة مطلوب",
     invalidExpiry: "تاريخ انتهاء غير صحيح (MM/YY)",
     invalidAmount: "قيمة غير صحيحة",
+    selectCurrency: "يرجى اختيار عملة.",
+    failed: "حدث خطأ. يرجى المحاولة مرة أخرى.",
     duplicateCurrency: "عملة مكررة",
     approve: "قبول",
     settings: "الإعدادات",
@@ -927,6 +941,7 @@ export const translations: Record<
     approveUserTitle: "قبول المستخدم",
     rejectUserTitle: "رفض المستخدم",
     cancel: "إلغاء",
+    back: "رجوع",
     advertisement: "إعلان",
     goodEvening: "مساء الخير",
     welcomeBack: "مرحباً بعودتك،",

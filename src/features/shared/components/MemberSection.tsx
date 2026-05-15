@@ -6,7 +6,6 @@ import { useI18n } from "@/hooks/use-i18n";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { LinearGradient } from "expo-linear-gradient";
-import React from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { UserProfile } from "../types";
 import { UserRow } from "./UserRow";
