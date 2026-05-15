@@ -2,6 +2,9 @@ import type {
   Regularity,
   SourceType,
 } from "@/src/services/incomeSources.service";
+import type { Control } from "react-hook-form";
+
+import type { IncomeSourceFormValues } from "../../constants";
 
 export type WalletOption = {
   slotKey: string;
@@ -14,10 +17,10 @@ export type AddEntryModalProps = {
   visible: boolean;
   isDark: boolean;
   saving: boolean;
+  control: Control<IncomeSourceFormValues>;
   type: SourceType;
   regularity: Regularity;
   selectedWalletSlot: string | null;
-  amount: string;
   currency: string;
   notes: string;
   sourceTypes: SourceType[];
@@ -29,7 +32,6 @@ export type AddEntryModalProps = {
   onTypeChange: (value: SourceType) => void;
   onRegularityChange: (value: Regularity) => void;
   onWalletSelect: (slotKey: string) => void;
-  onAmountChange: (value: string) => void;
   onCurrencyChange: (value: string) => void;
   onNotesChange: (value: string) => void;
 };

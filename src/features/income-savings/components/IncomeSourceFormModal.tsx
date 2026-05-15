@@ -1,6 +1,8 @@
 import { AddEntryModal } from "./AddEntryModal";
 
 import { REGULARITY_TYPES, SOURCE_TYPES } from "../constants";
+import type { Control } from "react-hook-form";
+import type { IncomeSourceFormValues } from "../constants";
 
 type IncomeSourceFormModalProps = {
   state: {
@@ -9,10 +11,10 @@ type IncomeSourceFormModalProps = {
     saving: boolean;
   };
   form: {
+    control: Control<IncomeSourceFormValues>;
     type: any;
     regularity: any;
     selectedWalletSlot: string | null;
-    amount: string;
     currency: string;
     notes: string;
   };
@@ -26,7 +28,6 @@ type IncomeSourceFormModalProps = {
     onTypeChange: (value: any) => void;
     onRegularityChange: (value: any) => void;
     onWalletSelect: (value: string | null) => void;
-    onAmountChange: (value: string) => void;
     onCurrencyChange: (value: string) => void;
     onNotesChange: (value: string) => void;
   };
@@ -38,10 +39,10 @@ export function IncomeSourceFormModal(props: IncomeSourceFormModalProps) {
       visible={props.state.visible}
       isDark={props.state.isDark}
       saving={props.state.saving}
+      control={props.form.control}
       type={props.form.type}
       regularity={props.form.regularity}
       selectedWalletSlot={props.form.selectedWalletSlot}
-      amount={props.form.amount}
       currency={props.form.currency}
       notes={props.form.notes}
       sourceTypes={SOURCE_TYPES}
@@ -53,7 +54,6 @@ export function IncomeSourceFormModal(props: IncomeSourceFormModalProps) {
       onTypeChange={props.actions.onTypeChange}
       onRegularityChange={props.actions.onRegularityChange}
       onWalletSelect={props.actions.onWalletSelect}
-      onAmountChange={props.actions.onAmountChange}
       onCurrencyChange={props.actions.onCurrencyChange}
       onNotesChange={props.actions.onNotesChange}
     />

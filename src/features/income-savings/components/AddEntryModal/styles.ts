@@ -91,6 +91,12 @@ export const styles = StyleSheet.create({
     paddingVertical: 13,
     fontSize: 16,
   },
+  fieldError: {
+    color: "#EF4444",
+    fontSize: 12,
+    marginTop: 6,
+    marginBottom: 8,
+  },
   modalButtons: {
     flexDirection: "row",
     gap: 10,

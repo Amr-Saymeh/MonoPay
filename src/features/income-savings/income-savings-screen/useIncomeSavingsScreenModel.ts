@@ -105,6 +105,7 @@ export function useIncomeSavingsScreenModel() {
         saving: incomeForm.createMutation.isPending,
       },
       values: {
+        control: incomeForm.control,
         type: incomeForm.type,
         regularity: incomeForm.regularity,
         selectedWalletSlot: incomeForm.selectedWalletSlot,

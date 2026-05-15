@@ -26,10 +26,10 @@ export function AddEntryModal({
   visible,
   isDark,
   saving,
+  control,
   type,
   regularity,
   selectedWalletSlot,
-  amount,
   currency,
   notes,
   sourceTypes,
@@ -41,7 +41,6 @@ export function AddEntryModal({
   onTypeChange,
   onRegularityChange,
   onWalletSelect,
-  onAmountChange,
   onCurrencyChange,
   onNotesChange,
 }: AddEntryModalProps) {
@@ -205,13 +204,12 @@ export function AddEntryModal({
         />
 
         <IncomeEntryFields
-          amount={amount}
+          control={control}
           notes={notes}
           isDark={isDark}
           inputBg={inputBg}
           inputBorder={inputBorder}
           inputColor={inputColor}
-          onAmountChange={onAmountChange}
           onNotesChange={onNotesChange}
         />
       </BottomSheetScrollView>
