@@ -45,18 +45,19 @@ export function SharedCard({
   const isShared = !!(ownerLabel && memberUids);
   const isActive = String(walletState ?? 'active').toLowerCase() === 'active';
 
-  const nonZero = useMemo(
-    () => currencies.filter((c) => c.balance > 0),
-    [currencies],
-  );
+  const visibleCurrencies = useMemo(() => {
+    if (currencies.length === 0) return [];
+    const positive = currencies.filter((c) => c.balance > 0);
+    return positive.length > 0 ? positive : [currencies[0]];
+  }, [currencies]);
 
   useEffect(() => {
     setDisplayedIndex(0);
     fadeAnim.setValue(1);
-  }, [currencies, fadeAnim]);
+  }, [visibleCurrencies, fadeAnim]);
 
   const handlePress = useCallback(() => {
-    if (nonZero.length <= 1) return;
+    if (visibleCurrencies.length <= 1) return;
     Animated.sequence([
       Animated.timing(fadeAnim, {
         toValue: 0,
@@ -70,12 +71,12 @@ export function SharedCard({
       }),
     ]).start();
     setTimeout(() => {
-      setDisplayedIndex((prev) => (prev + 1) % nonZero.length);
+      setDisplayedIndex((prev) => (prev + 1) % visibleCurrencies.length);
       onCurrencyChange?.();
     }, ANIMATION_DURATION);
-  }, [nonZero.length, fadeAnim, onCurrencyChange]);
+  }, [visibleCurrencies.length, fadeAnim, onCurrencyChange]);
 
-  const displayed = nonZero[displayedIndex % Math.max(nonZero.length, 1)];
+  const displayed = visibleCurrencies[displayedIndex % Math.max(visibleCurrencies.length, 1)];
 
   return (
     <TouchableOpacity style={styles.container} onPress={handlePress} activeOpacity={0.92}>
@@ -114,7 +115,7 @@ export function SharedCard({
 
       <Text style={styles.label}>Available Balance</Text>
 
-      {nonZero.length === 0 ? (
+      {visibleCurrencies.length === 0 ? (
         <Text style={styles.balance}>—</Text>
       ) : displayed ? (
         <Animated.View style={{ opacity: fadeAnim }}>
@@ -133,7 +134,7 @@ export function SharedCard({
             <Text style={styles.currencyCode}>
               {displayed.code.toUpperCase()}
             </Text>
-            {nonZero.length > 1 && (
+            {visibleCurrencies.length > 1 && (
               <Text style={styles.currencyChevron}>▾</Text>
             )}
           </TouchableOpacity>
@@ -141,9 +142,9 @@ export function SharedCard({
       ) : null}
 
 
-      {nonZero.length > 1 && (
+      {visibleCurrencies.length > 1 && (
         <View style={styles.chips}>
-          {nonZero.map((_, i) => (
+          {visibleCurrencies.map((_, i) => (
             <View
               key={i}
               style={[styles.chip, i === displayedIndex && styles.chipActive]}

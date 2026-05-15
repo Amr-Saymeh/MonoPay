@@ -120,10 +120,10 @@ export const homeStyles = StyleSheet.create({
 
   // TotalBalance styles
   balanceContainer: {
-    marginHorizontal: 24,
-    marginTop: -50,
-    marginBottom: 40,
-    borderRadius: 28,
+    marginHorizontal: 20,
+    marginTop: -25,
+    marginBottom: 35,
+    borderRadius: 30,
     overflow: 'hidden',
     elevation: 8,
     shadowColor: '#000',
