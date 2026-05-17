@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { useRouter } from "expo-router";
 import { Controller, useForm, useWatch } from "react-hook-form";
@@ -23,7 +23,6 @@ import {
   sanitizeEmailInput,
   type SignupValues,
 } from "@/src/features/auth/utils/signupValidation";
-import { getEmailAvailability, type EmailAvailabilityStatus } from "@/src/services/auth.service";
 
 export default function SignupDetailsScreen() {
   const { t, isRtl } = useI18n();
@@ -35,7 +34,6 @@ export default function SignupDetailsScreen() {
   const [securePin, setSecurePin] = useState(true);
   const [secureConfirm, setSecureConfirm] = useState(true);
   const [continuing, setContinuing] = useState(false);
-  const [emailStatus, setEmailStatus] = useState<EmailAvailabilityStatus | "checking" | "idle">("idle");
 
   const { scrollRef, scrollToField } = useAuthFormScreen();
   const firstNameRef = useRef<TextInput>(null);
@@ -46,7 +44,6 @@ export default function SignupDetailsScreen() {
   const confirmPinRef = useRef<TextInput>(null);
   const addressRef = useRef<TextInput>(null);
   const identityNumberRef = useRef<TextInput>(null);
-  const emailCheckTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const defaultValues = useMemo<SignupValues>(
     () => ({
@@ -83,62 +80,10 @@ export default function SignupDetailsScreen() {
     },
     t,
   );
-  const emailHasFormatError = Boolean(formState.errors.email);
-  const emailStatusMessage = emailHasFormatError
-    ? undefined
-    : emailStatus === "checking"
-      ? t("checkingEmail")
-      : emailStatus === "available"
-        ? t("emailAvailable")
-        : emailStatus === "exists"
-          ? t("emailAlreadyRegistered")
-          : undefined;
-  const canContinue =
-    !currentValidationError &&
-    !emailHasFormatError &&
-    emailStatus !== "exists" &&
-    emailStatus !== "checking" &&
-    !continuing;
+  const canContinue = !currentValidationError && !formState.errors.email && !continuing;
 
-  useEffect(() => {
-    let cancelled = false;
-
-    if (emailCheckTimeoutRef.current) {
-      clearTimeout(emailCheckTimeoutRef.current);
-      emailCheckTimeoutRef.current = null;
-    }
-
-    const email = (formValues.email ?? "").trim().toLowerCase();
-
-    if (!email.trim() || !isValidEmail(email)) {
-      setEmailStatus("idle");
-      return;
-    }
-
-    emailCheckTimeoutRef.current = setTimeout(() => {
-      setEmailStatus("checking");
-
-      void getEmailAvailability(email)
-        .then((status) => {
-          if (cancelled) return;
-
-          setEmailStatus(status);
-        });
-
-      emailCheckTimeoutRef.current = null;
-    }, 450);
-
-    return () => {
-      cancelled = true;
-
-      if (emailCheckTimeoutRef.current) {
-        clearTimeout(emailCheckTimeoutRef.current);
-      }
-    };
-  }, [formValues.email, t]);
-
-  const onContinue = handleSubmit(async (values) => {
-    if (continuing || emailStatus === "checking") return;
+  const onContinue = handleSubmit((values) => {
+    if (continuing) return;
 
     const error = getSignupValidationError(
       {
@@ -157,16 +102,6 @@ export default function SignupDetailsScreen() {
     if (error) {
       Alert.alert(t("error"), error);
       return;
-    }
-
-    const availability = await getEmailAvailability(values.email);
-    if (availability === "exists") {
-      setEmailStatus("exists");
-      return;
-    }
-
-    if (availability === "available") {
-      setEmailStatus("available");
     }
 
     clear();
@@ -252,8 +187,6 @@ export default function SignupDetailsScreen() {
               value={value}
               onChangeText={(text) => onChange(sanitizeEmailInput(text))}
               errorMessage={error?.message}
-              statusMessage={emailStatusMessage}
-              statusTone={emailStatus === "available" ? "success" : "default"}
               placeholder={t("email")}
               keyboardType="email-address"
               textContentType="emailAddress"

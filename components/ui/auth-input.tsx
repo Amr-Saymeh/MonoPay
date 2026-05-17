@@ -12,8 +12,6 @@ export type AuthInputProps = {
   onChangeText: (v: string) => void;
   placeholder: string;
   errorMessage?: string;
-  statusMessage?: string;
-  statusTone?: "default" | "success";
   onToggleSecure?: () => void;
 } & Omit<TextInputProps, "value" | "onChangeText" | "placeholder">;
 
@@ -23,8 +21,6 @@ export const AuthInput = forwardRef<TextInput, AuthInputProps>(function AuthInpu
     onChangeText,
     placeholder,
     errorMessage,
-    statusMessage,
-    statusTone = "default",
     secureTextEntry,
     onToggleSecure,
     autoCapitalize,
@@ -40,7 +36,6 @@ export const AuthInput = forwardRef<TextInput, AuthInputProps>(function AuthInpu
   const placeholderColor = useThemeColor({}, "placeholder");
   const iconColor = useThemeColor({}, "icon");
   const errorColor = useThemeColor({ light: "#DC2626", dark: "#F87171" }, "text");
-  const successColor = useThemeColor({ light: "#15803D", dark: "#4ADE80" }, "text");
 
   const showEye = useMemo(
     () => typeof onToggleSecure === "function",
@@ -90,16 +85,6 @@ export const AuthInput = forwardRef<TextInput, AuthInputProps>(function AuthInpu
           ]}
         >
           {errorMessage}
-        </Text>
-      ) : statusMessage ? (
-        <Text
-          style={[
-            styles.errorText,
-            isRtl ? styles.errorTextRtl : null,
-            { color: statusTone === "success" ? successColor : placeholderColor },
-          ]}
-        >
-          {statusMessage}
         </Text>
       ) : null}
     </View>
