@@ -108,8 +108,6 @@ export type TranslationKey =
   | "failedToSignIn"
   | "captureFailed"
   | "missingSignupData"
-  | "checkingEmail"
-  | "emailAvailable"
   | "emailAlreadyRegistered"
   | "invalidEmail"
   | "invalidIdNumber"
@@ -518,8 +516,6 @@ export const translations: Record<
     failedToSignIn: "Failed to sign in.",
     captureFailed: "Failed to capture image.",
     missingSignupData: "Missing signup data.",
-    checkingEmail: "Checking...",
-    emailAvailable: "Email available",
     emailAlreadyRegistered: "This email is already registered",
     invalidEmail: "Invalid email address",
     invalidIdNumber: "Invalid ID number",
@@ -926,8 +922,6 @@ export const translations: Record<
     failedToSignIn: "فشل تسجيل الدخول",
     captureFailed: "فشل التقاط الصورة",
     missingSignupData: "بيانات التسجيل غير مكتملة",
-    checkingEmail: "جاري التحقق...",
-    emailAvailable: "البريد الإلكتروني متاح",
     emailAlreadyRegistered: "هذا البريد الإلكتروني مسجل بالفعل",
     invalidEmail: "البريد الإلكتروني غير صحيح",
     invalidIdNumber: "رقم الهوية غير صحيح",
