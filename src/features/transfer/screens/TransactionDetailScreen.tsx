@@ -131,6 +131,7 @@ export default function TransactionDetailScreen() {
   );
 }
 
+// Row renders one detail line such as date, time, note, or the other party.
 function Row({
   label,
   value,
@@ -154,6 +155,7 @@ function Row({
   );
 }
 
+// Divider separates the rows inside the white details card.
 function Divider({ isDark }: { isDark: boolean }) {
   return <View style={[styles.divider, isDark && styles.dividerDark]} />;
 }

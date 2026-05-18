@@ -14,6 +14,7 @@ export function useTransactionHistory(uid: string) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // stop early if there is no logged-in user because the path depends on the uid.
     if (!uid) {
       setLoading(false);
       return;

@@ -20,6 +20,7 @@ export function SegmentedControl<T extends string>({
   onChange,
   isRtl = false,
 }: Props<T>) {
+  // selectedIndex decides where the animated pill should move.
   const selectedIndex = options.findIndex((o) => o.value === value);
   const animatedValue = useRef(new Animated.Value(selectedIndex)).current;
 

@@ -26,6 +26,7 @@ interface Props {
 }
 
 function WalletBadge({ slot, isDark }: { slot: EnrichedWalletSlot; isDark: boolean }) {
+  // each badge summarizes the wallet slot and its balances in one compact row.
   const currencies = Object.keys(slot.wallet?.currancies ?? {});
   const emoji = slot.emoji ?? (slot.wallet?.type === "credit" ? "💳" : "👛");
 
@@ -61,11 +62,13 @@ export function WalletPicker({
   onSelect,
   isRtl = false,
 }: Props) {
+  // visible opens the wallet selection modal.
   const [visible, setVisible] = useState(false);
   const { colorScheme } = useThemeMode();
   const isDark = colorScheme === "dark";
   // Only active wallets are shown — inactive ones are already filtered by useUserWallets.
 
+  // selecting a wallet updates the parent screen and closes the picker.
   const handleSelect = (slot: EnrichedWalletSlot) => {
     onSelect(slot);
     setVisible(false);

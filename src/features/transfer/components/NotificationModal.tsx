@@ -27,6 +27,7 @@ export function NotificationModal({
   onDismiss,
   language = "en",
 }: Props) {
+  // scale + opacity create the short entry animation for success and error feedback.
   const scaleAnim = useRef(new Animated.Value(0.85)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const { colorScheme } = useThemeMode();

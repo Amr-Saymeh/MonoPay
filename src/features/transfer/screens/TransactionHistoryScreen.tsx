@@ -61,6 +61,7 @@ export default function TransactionHistoryScreen() {
         </View>
       </LinearGradient>
 
+      {/* Three states only: loading, empty, or the actual transaction list. */}
       {loading ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color="#7C3AED" />

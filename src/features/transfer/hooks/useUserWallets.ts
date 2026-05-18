@@ -27,6 +27,7 @@ export function useUserWallets(userUid: string | null): UseUserWalletsResult {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // the hook joins wallet slot metadata from the user node with live balances from wallets/.
     if (!userUid) {
       setWallets([]);
       return;

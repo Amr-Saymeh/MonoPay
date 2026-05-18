@@ -23,6 +23,7 @@ export function SuccessModal({
   onDismiss,
   language = "en",
 }: Props) {
+  // these animated values make the success card pop in instead of appearing abruptly.
   const scaleAnim = useRef(new Animated.Value(0.85)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 

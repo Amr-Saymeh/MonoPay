@@ -32,6 +32,7 @@ export function AmountInput({
   isRtl = false,
   placeholder = "0.00",
 }: Props) {
+  // showPicker controls the currency picker modal for wallets that support multiple currencies.
   const [showPicker, setShowPicker] = useState(false);
   const inputRef = useRef<TextInput>(null);
   const { colorScheme } = useThemeMode();
@@ -39,6 +40,7 @@ export function AmountInput({
 
   const symbol = CURRENCY_SYMBOLS[currency] ?? currency.toUpperCase();
 
+  // keep the typed amount within the app rules before passing it to the parent form.
   const handleAmountChange = (text: string) => {
     const cleaned = text.replace(/[^0-9.]/g, "");
     const parts = cleaned.split(".");

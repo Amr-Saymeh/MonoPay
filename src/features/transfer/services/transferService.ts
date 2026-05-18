@@ -340,6 +340,7 @@ export async function rejectRequest(
 }
 
 // ─── Utils ────────────────────────────────────────────────────────────────────
+// Centralize the service error shape so every early return stays consistent.
 function fail(error: TransferError): ServiceResult {
   return { success: false, error };
 }

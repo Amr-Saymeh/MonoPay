@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Controller, type FieldErrors, useForm, useWatch } from "react-hook-form";
 import {
   Animated,
   KeyboardAvoidingView,
@@ -87,28 +88,76 @@ const MAX_AMOUNT: Record<string, number> = {
 
 const MAX_NOTE_LENGTH = 150;
 
+interface RequestMoneyFormValues {
+  amount: string;
+  currency: Currency;
+  selectedUser: AppUser | null;
+  category: Category | null;
+  note: string;
+}
+
 export default function RequestMoneyScreen() {
+  // useAuth returns the current user data used when creating the request.
   const { user } = useAuth();
   const currentUserUid = user?.uid ?? "";
+  // useI18n hook returns the language and isRtl properties
   const { language, isRtl } = useI18n();
+  // useThemeMode hook returns the theme mode
   const { colorScheme } = useThemeMode();
+  // isDark is a boolean that is used to check if the theme is dark
   const isDark = colorScheme === "dark";
+  // s to get the strings (placeholders, titles, errors, etc) of the current language
   const s = STRINGS[language as "en" | "ar"] ?? STRINGS.en;
+  // amountAnim to animate the amount input
   const amountAnim = useRef(new Animated.Value(0)).current;
-
-  const [amount, setAmount] = useState("");
-  const [currency, setCurrency] = useState<Currency>("nis");
-  const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
-  const [category, setCategory] = useState<Category | null>(null);
-  const [note, setNote] = useState("");
+  // showConfirm controls the confirmation bottom sheet before the request is created.
   const [showConfirm, setShowConfirm] = useState(false);
+  // notif controls the success/error modal shown for validation and request results.
   const [notif, setNotif] = useState<{
     type: "success" | "error";
     msg: string;
   } | null>(null);
 
-  const { execute, loading, reset } = useRequestMoney();
+  /**
+   * useRequestMoney hook provides access to the request money functionality.
+   * execute: function to create the request
+   * loading: boolean to show loading state
+   * reset: function to reset the hook state
+   */
+  const { execute, loading, reset: resetRequestState } = useRequestMoney();
 
+  /**
+   * useForm centralizes the field values and validation state.
+   * Controller is used because the screen is built from custom form components.
+   */
+  const {
+    control,
+    handleSubmit,
+    getValues,
+    setValue,
+    reset,
+    formState: { errors },
+  } = useForm<RequestMoneyFormValues>({
+    defaultValues: {
+      amount: "",
+      currency: "nis",
+      selectedUser: null,
+      category: null,
+      note: "",
+    },
+    mode: "onSubmit",
+    reValidateMode: "onChange",
+  });
+
+  // useWatch keeps the rendered values in sync with react-hook-form state.
+  const amount = useWatch({ control, name: "amount" }) ?? "";
+  const currency = useWatch({ control, name: "currency" }) ?? "nis";
+  const selectedUser = useWatch({ control, name: "selectedUser" }) ?? null;
+  const category = useWatch({ control, name: "category" }) ?? null;
+  const note = useWatch({ control, name: "note" }) ?? "";
+
+  // useEffect hook is a side effect hook that is used to perform side effects.
+  // In this case, it is used to make a smooth animation for the amount input on page load.
   useEffect(() => {
     Animated.spring(amountAnim, {
       toValue: 1,
@@ -118,51 +167,78 @@ export default function RequestMoneyScreen() {
     }).start();
   }, [amountAnim]);
 
+  // resetForm: function to reset the form
   const resetForm = useCallback(() => {
-    setAmount("");
-    setSelectedUser(null);
-    setCategory(null);
-    setNote("");
-    reset();
-  }, [reset]);
+    const currentCurrency = getValues("currency");
 
-  const validateForm = (): string | null => {
-    const parsedAmount = parseFloat(amount);
+    reset({
+      amount: "",
+      currency: currentCurrency,
+      selectedUser: null,
+      category: null,
+      note: "",
+    });
+    resetRequestState();
+  }, [getValues, reset, resetRequestState]);
 
-    if (!parsedAmount || parsedAmount <= 0) return s.errors.INVALID_AMOUNT;
-    if (!/^\d+(\.\d{1,2})?$/.test(amount)) return s.errors.INVALID_AMOUNT;
-    if (parsedAmount < 1) return s.errors.INVALID_AMOUNT;
+  // getFirstValidationError(formErrors): function to get the first error message that the user should fix
+  //formErrors is an object that contains the errors of the useForm 
+  
+  const getFirstValidationError = useCallback(
+    (formErrors: FieldErrors<RequestMoneyFormValues>): string => {
+      const orderedMessages = [
+        //if the first error is not found then check the next one and so on
+        formErrors.amount?.message,
+        formErrors.selectedUser?.message,
+        formErrors.note?.message,
+      ];
 
-    const max = MAX_AMOUNT[currency] ?? 5000;
-    if (parsedAmount > max)
-      return `Maximum amount is ${max} ${currency.toUpperCase()}`;
+      const firstMessage = orderedMessages.find(
+        (message): message is string =>
+          typeof message === "string" && message.length > 0,
+      );
 
-    if (!selectedUser) return s.fillRequired;
+      return firstMessage ?? s.errors.UNKNOWN;
+    },
+    //if the language of the app is changed then rerender this function
+    [s.errors.UNKNOWN],
+  );
 
-    if (note.length > MAX_NOTE_LENGTH)
-      return `Note cannot exceed ${MAX_NOTE_LENGTH} characters`;
+  /**
+   * if form validations pass then open bottom sheet to confirm the request
+   */
+  const openConfirmSheet = handleSubmit(
+    // if validation pass show bottom sheet
+    () => {
+      setShowConfirm(true);
+    },
+    // if validation fail show error message
+    (formErrors) => {
+      setNotif({ type: "error", msg: getFirstValidationError(formErrors) });
+    },
+  );
 
-    return null;
-  };
+  /**
+   * handleConfirm: is called after user confirm the request in the ConfirmBottomSheet
+   * it is used to execute the request
+   */
+  const handleConfirm = async () => {
+    const values = getValues();
+    const parsedAmount = parseFloat(values.amount);
 
-  const handleSubmit = () => {
-    const validationError = validateForm();
-    if (validationError) {
-      setNotif({ type: "error", msg: validationError });
+    if (!values.selectedUser) {
+      setShowConfirm(false);
+      setNotif({ type: "error", msg: s.fillRequired });
       return;
     }
-    setShowConfirm(true);
-  };
 
-  const handleConfirm = async () => {
-    const parsedAmount = parseFloat(amount);
     const error = await execute({
       requesterUid: currentUserUid,
-      payerUid: selectedUser!.uid,
+      payerUid: values.selectedUser.uid,
       amount: parsedAmount,
-      currency,
-      category: category?.key ?? "other",
-      note,
+      currency: values.currency,
+      category: values.category?.key ?? "other",
+      note: values.note,
     });
 
     if (!error) {
@@ -173,7 +249,9 @@ export default function RequestMoneyScreen() {
     }
   };
 
+  // parsedAmount is the amount after parsing it to float
   const parsedAmount = parseFloat(amount) || 0;
+  // symbol is the currency symbol
   const symbol = CURRENCY_SYMBOLS[currency] ?? currency.toUpperCase();
 
   return (
@@ -252,27 +330,74 @@ export default function RequestMoneyScreen() {
               ]}
             >
               <Label text={s.amount} isRtl={isRtl} isDark={isDark} />
-              <AmountInput
-                amount={amount}
-                currency={currency}
-                availableCurrencies={["nis", "usd", "jod"]}
-                onAmountChange={setAmount}
-                onCurrencyChange={setCurrency}
-                isRtl={isRtl}
+              <Controller
+                control={control}
+                name="amount"
+                rules={{
+                  required: s.errors.INVALID_AMOUNT,
+                  validate: {
+                    // check if the amount is a valid format (only numbers and one decimal point)
+                    validFormat: (value) =>
+                      /^\d+(\.\d{1,2})?$/.test(value) ||
+                      s.errors.INVALID_AMOUNT,
+                    // check if the amount is a valid value (greater than or equal to 1)
+                    validValue: (value) => {
+                      const parsed = parseFloat(value);
+                      return (!!parsed && parsed >= 1) || s.errors.INVALID_AMOUNT;
+                    },
+                    // check if the amount is not greater than the maximum amount allowed
+                    maxAmount: (value) => {
+                      const parsed = parseFloat(value);
+                      const max = MAX_AMOUNT[getValues("currency")] ?? 5000;
+                      // if the amount is greater than the maximum amount allowed return an error message
+                      return (
+                        parsed <= max ||
+                        `Maximum amount is ${max} ${getValues("currency").toUpperCase()}`
+                      );
+                    },
+                  },
+                }}
+                render={({ field: { value, onChange } }) => (
+                  <AmountInput
+                    amount={value}
+                    currency={currency}
+                    availableCurrencies={["nis", "usd", "jod"]}
+                    onAmountChange={onChange}
+                    onCurrencyChange={(nextCurrency) => {
+                      setValue("currency", nextCurrency as Currency, {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      });
+                    }}
+                    isRtl={isRtl}
+                  />
+                )}
               />
+              <ErrorText message={errors.amount?.message} isRtl={isRtl} />
             </Animated.View>
 
             <View style={styles.section}>
               <Label text={s.payer} isRtl={isRtl} isDark={isDark} />
-              <UserPicker
-                label={s.payer}
-                placeholder={s.selectPayer}
-                selectedUser={selectedUser}
-                currentUserUid={currentUserUid}
-                onSelect={setSelectedUser}
-                isRtl={isRtl}
-                language={language as "en" | "ar"}
+              <Controller
+                control={control}
+                name="selectedUser"
+                rules={{
+                  // validate that the payer is not empty
+                  validate: (value) => value !== null || s.fillRequired,
+                }}
+                render={({ field: { value, onChange } }) => (
+                  <UserPicker
+                    label={s.payer}
+                    placeholder={s.selectPayer}
+                    selectedUser={value}
+                    currentUserUid={currentUserUid}
+                    onSelect={onChange}
+                    isRtl={isRtl}
+                    language={language as "en" | "ar"}
+                  />
+                )}
               />
+              <ErrorText message={errors.selectedUser?.message} isRtl={isRtl} />
               <View
                 style={[
                   styles.infoBar,
@@ -297,30 +422,47 @@ export default function RequestMoneyScreen() {
 
             <View style={styles.section}>
               <Label text={s.category} isRtl={isRtl} isDark={isDark} />
-              <CategoryPicker
-                label={s.selectCategory}
-                selected={category}
-                onSelect={setCategory}
-                isRtl={isRtl}
-                language={language}
+              <Controller
+                control={control}
+                name="category"
+                render={({ field: { value, onChange } }) => (
+                  <CategoryPicker
+                    label={s.selectCategory}
+                    selected={value}
+                    onSelect={onChange}
+                    isRtl={isRtl}
+                    language={language}
+                  />
+                )}
               />
             </View>
 
             <View style={styles.section}>
               <Label text={s.noteOptional} isRtl={isRtl} isDark={isDark} />
               <View style={[styles.noteBox, isDark && styles.noteBoxDark]}>
-                <TextInput
-                  value={note}
-                  onChangeText={setNote}
-                  placeholder={s.notePlaceholder}
-                  placeholderTextColor={
-                    isDark ? "rgba(255,255,255,0.3)" : "#9CA3AF"
-                  }
-                  multiline
-                  numberOfLines={3}
-                  textAlignVertical="top"
-                  textAlign={isRtl ? "right" : "left"}
-                  style={[styles.noteInput, isDark && styles.noteInputDark]}
+                <Controller
+                  control={control}
+                  name="note"
+                  rules={{
+                    validate: (value) =>
+                      value.length <= MAX_NOTE_LENGTH ||
+                      `Note cannot exceed ${MAX_NOTE_LENGTH} characters`,
+                  }}
+                  render={({ field: { value, onChange } }) => (
+                    <TextInput
+                      value={value}
+                      onChangeText={onChange}
+                      placeholder={s.notePlaceholder}
+                      placeholderTextColor={
+                        isDark ? "rgba(255,255,255,0.3)" : "#9CA3AF"
+                      }
+                      multiline
+                      numberOfLines={3}
+                      textAlignVertical="top"
+                      textAlign={isRtl ? "right" : "left"}
+                      style={[styles.noteInput, isDark && styles.noteInputDark]}
+                    />
+                  )}
                 />
                 <Text
                   style={[
@@ -334,11 +476,14 @@ export default function RequestMoneyScreen() {
                   {note.length}/{MAX_NOTE_LENGTH}
                 </Text>
               </View>
+              <ErrorText message={errors.note?.message} isRtl={isRtl} />
             </View>
 
             <SubmitButton
               label={`${s.requestBtn} ${symbol}${parsedAmount.toFixed(2)}`}
-              onPress={handleSubmit}
+              onPress={() => {
+                void openConfirmSheet();
+              }}
               loading={loading}
             />
           </ScrollView>
@@ -402,6 +547,29 @@ function Label({
   );
 }
 
+// ErrorText keeps validation messages consistent under all request form fields.
+function ErrorText({
+  message,
+  isRtl,
+}: {
+  message: string | undefined;
+  isRtl: boolean;
+}) {
+  if (!message) return null;
+
+  return (
+    <Text
+      style={[
+        styles.errorText,
+        { textAlign: isRtl ? "right" : "left" },
+      ]}
+    >
+      {message}
+    </Text>
+  );
+}
+
+// SubmitButton is the final CTA that starts validation and opens the confirm sheet.
 function SubmitButton({
   label,
   onPress,
@@ -550,6 +718,13 @@ const styles = StyleSheet.create({
     textAlign: "right",
     fontSize: 11,
     marginTop: 6,
+  },
+  errorText: {
+    color: "#EF4444",
+    fontSize: 12,
+    fontWeight: "500",
+    marginTop: 6,
+    marginHorizontal: 4,
   },
   submitBtnGradient: {
     flexDirection: "row",

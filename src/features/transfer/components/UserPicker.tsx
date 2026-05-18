@@ -203,8 +203,11 @@ export function UserPicker({
   language = "en",
 }: Props) {
   const s = S[language];
+  // visible controls the bottom sheet that lists contacts and search results.
   const [visible, setVisible] = useState(false);
+  // search stores the current query so the picker can filter contacts or phone lookup results.
   const [search, setSearch] = useState("");
+  // phoneSearchResult is used only when the query looks like a phone number.
   const [phoneSearchResult, setPhoneSearchResult] = useState<
     AppUser | "not_found" | "searching" | null
   >(null);
@@ -219,6 +222,7 @@ export function UserPicker({
     searchByPhone,
   } = useContactUsers(currentUserUid);
 
+  // switch automatically between local contact filtering and DB phone lookup.
   const handleSearchChange = async (text: string) => {
     setSearch(text);
     setPhoneSearchResult(null);
@@ -242,6 +246,7 @@ export function UserPicker({
       )
     : onAppContacts;
 
+  // once a user is chosen we close the picker and clear any old search state.
   const handleSelect = (user: AppUser) => {
     onSelect(user);
     setSearch("");
@@ -249,6 +254,7 @@ export function UserPicker({
     setVisible(false);
   };
 
+  // renderContent keeps the different picker states isolated from the trigger UI.
   const renderContent = () => {
     if (loading) {
       return (

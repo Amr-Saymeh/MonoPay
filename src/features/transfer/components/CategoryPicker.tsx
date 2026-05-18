@@ -28,13 +28,16 @@ export function CategoryPicker({
   isRtl = false,
   language = "en",
 }: Props) {
+  // visible opens the category bottom sheet when the user wants to pick a category.
   const [visible, setVisible] = useState(false);
   const { colorScheme } = useThemeMode();
   const isDark = colorScheme === "dark";
 
+  // return the localized label that matches the current screen language.
   const getCategoryLabel = (cat: Category) =>
     language === "ar" ? cat.labelAr : cat.label;
 
+  // close the modal immediately after the user selects a category.
   const handleSelect = (cat: Category) => {
     onSelect(cat);
     setVisible(false);

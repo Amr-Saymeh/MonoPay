@@ -56,6 +56,7 @@ export function useContactUsers(excludeUid?: string): UseContactUsersResult {
   const [allDBUsers, setAllDBUsers] = useState<AppUser[]>([]);
 
   useEffect(() => {
+    // build two lists: contacts already on MonoPay and contacts that still need an invite.
     const run = async () => {
       try {
         setLoading(true);
@@ -134,6 +135,7 @@ export function useContactUsers(excludeUid?: string): UseContactUsersResult {
   }, [excludeUid]);
 
   // ─── بحث برقم هاتف خارج جهات الاتصال ─────────────────────────────────────
+  // searchByPhone supports QR/request/send flows where the user types a number manually.
   const searchByPhone = async (phone: string): Promise<AppUser | null> => {
     const normalized = normalizePhone(phone);
     

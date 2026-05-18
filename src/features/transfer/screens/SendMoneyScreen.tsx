@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Controller, type FieldErrors, useForm, useWatch } from "react-hook-form";
 import {
   Animated,
   KeyboardAvoidingView,
@@ -90,34 +91,90 @@ const MAX_AMOUNT: Record<string, number> = {
 
 const MAX_NOTE_LENGTH = 150;
 
+interface SendMoneyFormValues {
+  amount: string;
+  currency: Currency;
+  selectedUser: AppUser | null;
+  category: Category | null;
+  note: string;
+  walletSlot: EnrichedWalletSlot | null;
+}
+
 export default function SendMoneyScreen() {
+  // useAuth returns the user profile, user data, and functions to sign in, sign out, and register.
   const { user } = useAuth();
   const currentUserUid = user?.uid ?? "";
+  // useI18n hook returns the language and isRtl properties
   const { language, isRtl } = useI18n();
+  // useThemeMode hook returns the theme mode
   const { colorScheme } = useThemeMode();
+  // isDark is a boolean that is used to check if the theme is dark
   const isDark = colorScheme === "dark";
+  // s to get the strings (placeholders, titles, errors, etc) of the current language
   const s = STRINGS[language as "en" | "ar"] ?? STRINGS.en;
-
+  // amountAnim to animate the amount input
   const amountAnim = useRef(new Animated.Value(0)).current;
-
-  const [amount, setAmount] = useState("");
-  const [currency, setCurrency] = useState<Currency>("nis");
-  const [selectedUser, setSelectedUser] = useState<AppUser | null>(null);
-  const [category, setCategory] = useState<Category | null>(null);
-  const [note, setNote] = useState("");
-  const [myWalletSlot, setMyWalletSlot] = useState<EnrichedWalletSlot | null>(
-    null,
-  );
+  // showConfirm is a state that is used to show or hide the ConfirmBottomSheet
+  // ConfirmBottomSheet is a bottom sheet that is used to confirm the transfer
   const [showConfirm, setShowConfirm] = useState(false);
+  // notif is a state that is used to show or hide the NotificationModal
+  // and NotificationModal is a modal that is used to show the success or error message
   const [notif, setNotif] = useState<{
     type: "success" | "error";
     msg: string;
   } | null>(null);
-
-  const { execute, loading, reset } = useSendMoney();
+  /**
+   * useSendMoney hook provides access to the send money functionality.
+   * It used to send money to the recipient.
+   * execute: function to send money
+   * loading: boolean to show loading state
+   * reset: function to reset the form
+   */
+  const { execute, loading, reset: resetSendState } = useSendMoney();
+  /**
+   * useUserWallets hook provides access to the user wallets functionality.
+   * It used to get the user's wallets to use in wallet picker.
+   * wallets: array of user's wallets
+   * loading: boolean to show loading state
+   */
   const { wallets: myWallets, loading: walletsLoading } =
     useUserWallets(currentUserUid);
 
+  /**
+   * useForm centralizes the field values and validation state.
+   * Controller is used because most inputs on this screen are custom components.
+   */
+  const {
+    control,
+    handleSubmit,
+    getValues,
+    setValue,
+    reset,
+    formState: { errors },
+  } = useForm<SendMoneyFormValues>({
+    defaultValues: {
+      amount: "",
+      currency: "nis",
+      selectedUser: null,
+      category: null,
+      note: "",
+      walletSlot: null,
+    },
+    mode: "onSubmit",
+    reValidateMode: "onChange",
+  });
+
+  // useWatch keeps the UI in sync with form state without scattering useState across the screen like using useState in every input.
+  const amount = useWatch({ control, name: "amount" }) ?? "";
+  const currency = useWatch({ control, name: "currency" }) ?? "nis";
+  const selectedUser = useWatch({ control, name: "selectedUser" }) ?? null;
+  const category = useWatch({ control, name: "category" }) ?? null;
+  const note = useWatch({ control, name: "note" }) ?? "";
+  // myWalletSlot is a slot that contains wallet information
+  const myWalletSlot = useWatch({ control, name: "walletSlot" }) ?? null;
+
+  // useEffect hook is a side effect hook that is used to perform side effects.
+  // In this case, it is used to make a smooth animation for the amount input when the myWalletSlot is selected.
   useEffect(() => {
     if (myWalletSlot) {
       Animated.spring(amountAnim, {
@@ -131,83 +188,115 @@ export default function SendMoneyScreen() {
     }
   }, [amountAnim, myWalletSlot]);
 
+  // resetForm: function to reset the form
   const resetForm = useCallback(() => {
-    setAmount("");
-    setSelectedUser(null);
-    setCategory(null);
-    setNote("");
-    setMyWalletSlot(null);
-    reset();
-  }, [reset]);
+    const currentCurrency = getValues("currency");
 
-  const validateForm = (): string | null => {
-    const parsedAmount = parseFloat(amount);
+    reset({
+      amount: "",
+      currency: currentCurrency,
+      selectedUser: null,
+      category: null,
+      note: "",
+      walletSlot: null,
+    });
+    resetSendState();
+  }, [getValues, reset, resetSendState]);
 
-    if (!parsedAmount || parsedAmount <= 0) return s.errors.INVALID_AMOUNT;
-    if (!/^\d+(\.\d{1,2})?$/.test(amount)) return s.errors.INVALID_AMOUNT;
-    if (parsedAmount < 1) return s.errors.INVALID_AMOUNT;
+  // getFirstValidationError function to get the first error message that the user should fix
+  const getFirstValidationError = useCallback(
+    (formErrors: FieldErrors<SendMoneyFormValues>): string => {
+      const orderedMessages = [
+        //if the first error is not found then check the next one and so on
+        formErrors.amount?.message,
+        formErrors.walletSlot?.message,
+        formErrors.selectedUser?.message,
+        formErrors.note?.message,
+      ];
 
-    const max = MAX_AMOUNT[currency] ?? 5000;
-    if (parsedAmount > max)
-      return `Maximum amount is ${max} ${currency.toUpperCase()}`;
+      const firstMessage = orderedMessages.find(
+        (message): message is string => typeof message === "string" && message.length > 0,
+      );
 
-    if (!myWalletSlot || !selectedUser) return s.fillRequired;
+      return firstMessage ?? s.errors.UNKNOWN;
+    },
+    [s.errors.UNKNOWN],
+  );
 
-    if (note.length > MAX_NOTE_LENGTH)
-      return `Note cannot exceed ${MAX_NOTE_LENGTH} characters`;
+  /**
+   * if form validations pass then open bottom sheet to confirm the transfer
+   */
+  const openConfirmSheet = handleSubmit(
+    //if validation pass show bottom sheet
+    () => {
+      setShowConfirm(true);
+    },
+    //if validation fail show error message
+    (formErrors) => {
+      setNotif({ type: "error", msg: getFirstValidationError(formErrors) });
+    },
+  );
 
-    return null;
-  };
+  /**
+   * handleConfirm: is called after user confirm the transfer in the ConfirmBottomSheet
+   * it is used to execute the transfer
+   */
+  const handleConfirm = async () => {
+    const values = getValues();
+    const parsedAmount = parseFloat(values.amount);
 
-  const handleSubmit = () => {
-    const validationError = validateForm();
-    if (validationError) {
-      setNotif({ type: "error", msg: validationError });
+    if (!values.walletSlot || !values.selectedUser) {
+      setShowConfirm(false);
+      setNotif({ type: "error", msg: s.fillRequired });
       return;
     }
-    setShowConfirm(true);
-  };
 
-  const handleConfirm = async () => {
-    const parsedAmount = parseFloat(amount);
+    // execute call function to send money
+    // execute return error if there is an error
     const error = await execute({
       senderUid: currentUserUid,
-      fromSlotKey: myWalletSlot!.slotKey,
-      receiverUid: selectedUser!.uid,
+      fromSlotKey: values.walletSlot.slotKey,
+      receiverUid: values.selectedUser.uid,
       amount: parsedAmount,
-      currency,
-      category: category?.key ?? "other",
-      note,
+      currency: values.currency,
+      category: values.category?.key ?? "other",
+      note: values.note,
     });
 
     if (!error) {
+      // if there is no error, reset the form and show success message
       setShowConfirm(false);
       setNotif({ type: "success", msg: s.successSend });
     } else {
       setNotif({ type: "error", msg: s.errors[error] ?? s.errors.UNKNOWN });
     }
   };
-
+  // parsedAmount is the amount after parsing it to float
   const parsedAmount = parseFloat(amount) || 0;
+  // symbol is the currency symbol
   const symbol = CURRENCY_SYMBOLS[currency] ?? currency.toUpperCase();
 
   return (
+    // GestureHandlerRootView is for confirm bottom sheet animation to work properly
     <GestureHandlerRootView style={{ flex: 1 }}>
       <View style={[styles.root, isDark && styles.rootDark]}>
         <StatusBar barStyle="light-content" />
 
+        {/* Header gradient is a gradient purple color for the header */}
         <LinearGradient
           colors={["#7C3AED", "#6D28D9", "#5B21B6"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.headerGradient}
         >
+          {/* header row with back button and title */}
           <View
             style={[
               styles.headerRow,
               { flexDirection: isRtl ? "row-reverse" : "row" },
             ]}
           >
+            {/* back button */}
             <Ionicons
               name={isRtl ? "arrow-forward" : "arrow-back"}
               size={24}
@@ -228,7 +317,10 @@ export default function SendMoneyScreen() {
             </Text>
           </View>
         </LinearGradient>
+        {/* end header */}
 
+        {/* main form */}
+        {/* KeyboardAvoidingView : avoid the keyboard to hide the form */}
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={{ flex: 1 }}
@@ -240,28 +332,49 @@ export default function SendMoneyScreen() {
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.section}>
+              {/* my wallet selection */}
               <Label text={s.myWallet} isRtl={isRtl} isDark={isDark} />
-              <WalletPicker
-                label={s.myWallet}
-                placeholder={s.selectWallet}
-                selectedSlot={myWalletSlot}
-                wallets={myWallets}
-                loading={walletsLoading}
-                onSelect={(slot) => {
-                  setMyWalletSlot(slot);
-                  setCurrency(
-                    Object.keys(slot.wallet?.currancies ?? {})[0] ?? "nis",
-                  );
+              {/* wallet picker component it is used to select wallet */}
+              {/* Controller is used to link the WalletPicker to the react useForm*/}
+              <Controller
+                control={control} //link the controller to the useForm
+                name="walletSlot"
+                rules={{
+                  // validation to check if the wallet slot is selected 
+                  validate: (value) => value !== null || s.fillRequired,
                 }}
-                isRtl={isRtl}
+                render={({ field: { value, onChange } }) => (
+                  //onChange tells the useform that the value has changed
+                  <WalletPicker
+                    label={s.myWallet}
+                    placeholder={s.selectWallet}
+                    selectedSlot={value}
+                    wallets={myWallets}
+                    loading={walletsLoading}
+                    onSelect={(slot) => {
+                      onChange(slot);
+                      // set the currency to the first currency in the selected wallet
+                      setValue(
+                        "currency",
+                        (Object.keys(slot.wallet?.currancies ?? {})[0] ?? "nis") as Currency,
+                        { shouldDirty: true, shouldValidate: true },
+                      );
+                    }}
+                    isRtl={isRtl}
+                  />
+                )}
               />
+              {/* error message if the wallet slot is not selected */}
+              <ErrorText message={errors.walletSlot?.message} isRtl={isRtl} />
             </View>
 
+
+            {/*if myWalletSlot is selected show the amount input*/}
             {myWalletSlot && (
               <Animated.View
                 style={[
                   styles.section,
-                  {
+                  { 
                     opacity: amountAnim,
                     transform: [
                       {
@@ -275,32 +388,79 @@ export default function SendMoneyScreen() {
                 ]}
               >
                 <Label text={s.amount} isRtl={isRtl} isDark={isDark} />
-                <AmountInput
-                  amount={amount}
-                  currency={currency}
-                  availableCurrencies={
-                    myWalletSlot.wallet?.currancies
-                      ? Object.keys(myWalletSlot.wallet.currancies)
-                      : ["nis", "usd", "jod"]
-                  }
-                  onAmountChange={setAmount}
-                  onCurrencyChange={setCurrency}
-                  isRtl={isRtl}
+                <Controller
+                  control={control}
+                  name="amount"
+                  rules={{
+                    required: s.errors.INVALID_AMOUNT,
+                    validate: {
+                      // check if the amount is a valid format (only numbers and one decimal point)
+                      validFormat: (value) =>
+                        /^\d+(\.\d{1,2})?$/.test(value) || s.errors.INVALID_AMOUNT,
+                      // check if the amount is a valid value (greater than or equal to 1)
+                      validValue: (value) => {
+                        const parsed = parseFloat(value);
+                        return (!!parsed && parsed >= 1) || s.errors.INVALID_AMOUNT;
+                      },
+                      // check if the amount is not greater than the maximum amount allowed
+                      maxAmount: (value) => {
+                        const parsed = parseFloat(value);
+                        const max = MAX_AMOUNT[getValues("currency")] ?? 5000;
+                        // if the amount is greater than the maximum amount allowed return an error message
+                        return (
+                          parsed <= max ||
+                          `Maximum amount is ${max} ${getValues("currency").toUpperCase()}`
+                        );
+                      },
+                    },
+                  }}
+                  render={({ field: { value, onChange } }) => (
+                    <AmountInput
+                      amount={value}
+                      currency={currency}
+                      availableCurrencies={
+                        myWalletSlot.wallet?.currancies
+                          ? Object.keys(myWalletSlot.wallet.currancies)
+                          : ["nis", "usd", "jod"]
+                      }
+                      onAmountChange={onChange}
+                      onCurrencyChange={(nextCurrency) => {
+                        setValue("currency", nextCurrency as Currency, {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        });
+                      }}
+                      isRtl={isRtl}
+                    />
+                  )}
                 />
+                <ErrorText message={errors.amount?.message} isRtl={isRtl} />
               </Animated.View>
             )}
 
             <View style={styles.section}>
               <Label text={s.recipient} isRtl={isRtl} isDark={isDark} />
-              <UserPicker
-                label={s.recipient}
-                placeholder={s.selectRecipient}
-                selectedUser={selectedUser}
-                currentUserUid={currentUserUid}
-                onSelect={setSelectedUser}
-                isRtl={isRtl}
-                language={language as "en" | "ar"}
+              <Controller
+                control={control}
+                name="selectedUser"
+                rules={{
+                  // validate that the recipient is not empty
+                  // || we do it when the first condition is false
+                  validate: (value) => value !== null || s.fillRequired,
+                }}
+                render={({ field: { value, onChange } }) => (
+                  <UserPicker
+                    label={s.recipient}
+                    placeholder={s.selectRecipient}
+                    selectedUser={value}
+                    currentUserUid={currentUserUid}
+                    onSelect={onChange}
+                    isRtl={isRtl}
+                    language={language as "en" | "ar"}
+                  />
+                )}
               />
+              <ErrorText message={errors.selectedUser?.message} isRtl={isRtl} />
               <View
                 style={[
                   styles.infoBar,
@@ -325,30 +485,47 @@ export default function SendMoneyScreen() {
 
             <View style={styles.section}>
               <Label text={s.category} isRtl={isRtl} isDark={isDark} />
-              <CategoryPicker
-                label={s.selectCategory}
-                selected={category}
-                onSelect={setCategory}
-                isRtl={isRtl}
-                language={language}
+              <Controller
+                control={control}
+                name="category"
+                render={({ field: { value, onChange } }) => (
+                  <CategoryPicker
+                    label={s.selectCategory}
+                    selected={value}
+                    onSelect={onChange}
+                    isRtl={isRtl}
+                    language={language}
+                  />
+                )}
               />
             </View>
 
             <View style={styles.section}>
               <Label text={s.noteOptional} isRtl={isRtl} isDark={isDark} />
               <View style={[styles.noteBox, isDark && styles.noteBoxDark]}>
-                <TextInput
-                  value={note}
-                  onChangeText={setNote}
-                  placeholder={s.notePlaceholder}
-                  placeholderTextColor={
-                    isDark ? "rgba(255,255,255,0.3)" : "#9CA3AF"
-                  }
-                  multiline
-                  numberOfLines={3}
-                  textAlignVertical="top"
-                  textAlign={isRtl ? "right" : "left"}
-                  style={[styles.noteInput, isDark && styles.noteInputDark]}
+                <Controller
+                  control={control}
+                  name="note"
+                  rules={{
+                    validate: (value) =>
+                      value.length <= MAX_NOTE_LENGTH ||
+                      `Note cannot exceed ${MAX_NOTE_LENGTH} characters`,
+                  }}
+                  render={({ field: { value, onChange } }) => (
+                    <TextInput
+                      value={value}
+                      onChangeText={onChange}
+                      placeholder={s.notePlaceholder}
+                      placeholderTextColor={
+                        isDark ? "rgba(255,255,255,0.3)" : "#9CA3AF"
+                      }
+                      multiline
+                      numberOfLines={3}
+                      textAlignVertical="top"
+                      textAlign={isRtl ? "right" : "left"}
+                      style={[styles.noteInput, isDark && styles.noteInputDark]}
+                    />
+                  )}
                 />
                 <Text
                   style={[
@@ -362,11 +539,14 @@ export default function SendMoneyScreen() {
                   {note.length}/{MAX_NOTE_LENGTH}
                 </Text>
               </View>
+              <ErrorText message={errors.note?.message} isRtl={isRtl} />
             </View>
 
             <SubmitButton
               label={`${s.sendBtn} ${symbol}${parsedAmount.toFixed(2)}`}
-              onPress={handleSubmit}
+              onPress={() => {
+                void openConfirmSheet();
+              }}
               loading={loading}
             />
           </ScrollView>
@@ -426,6 +606,27 @@ function Label({
       ]}
     >
       {text}
+    </Text>
+  );
+}
+
+function ErrorText({
+  message,
+  isRtl,
+}: {
+  message: string | undefined;
+  isRtl: boolean;
+}) {
+  if (!message) return null;
+
+  return (
+    <Text
+      style={[
+        styles.errorText,
+        { textAlign: isRtl ? "right" : "left" },
+      ]}
+    >
+      {message}
     </Text>
   );
 }
@@ -562,6 +763,13 @@ const styles = StyleSheet.create({
     textAlign: "right",
     fontSize: 11,
     marginTop: 6,
+  },
+  errorText: {
+    color: "#EF4444",
+    fontSize: 12,
+    fontWeight: "500",
+    marginTop: 6,
+    marginHorizontal: 4,
   },
   submitBtnGradient: {
     flexDirection: "row",

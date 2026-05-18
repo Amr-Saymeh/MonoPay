@@ -38,6 +38,7 @@ export function TransactionCard({ transaction, language, isRtl, isDark = false }
     { day: "numeric", month: "short", year: "numeric" },
   );
 
+  // open the detail screen and forward everything it needs through route params.
   const handlePress = () => {
     router.push({
       pathname: "/transaction-detail",
