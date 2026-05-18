@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import { useState } from "react";
 
+import { useHeaderHeight } from "@react-navigation/elements";
 import { useRouter } from "expo-router";
-import { Alert, Pressable, ScrollView } from "react-native";
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -21,19 +22,20 @@ import { useSharedMembers } from "./hooks/useSharedMembers";
 import { styles } from "./styles";
 import type { BalanceRow, WalletType } from "./types";
 import {
-  EMOJI_OPTIONS,
-  TYPE_OPTIONS,
-  buildPreviewCurrencies,
-  getDefaultColor,
-  isValidExpiry,
-  nextCurrency,
-  parseAmount,
+    EMOJI_OPTIONS,
+    TYPE_OPTIONS,
+    buildPreviewCurrencies,
+    getDefaultColor,
+    isValidExpiry,
+    nextCurrency,
+    parseAmount,
 } from "./utils";
 
 export default function AddWalletScreen() {
   const router = useRouter();
   const { t } = useI18n();
   const { user } = useAuth();
+  const headerHeight = useHeaderHeight();
 
   const [walletName, setWalletName] = useState("");
   const [walletType, setWalletType] = useState<WalletType>("real");
@@ -170,98 +172,104 @@ export default function AddWalletScreen() {
 
   return (
     <ThemedView style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <ThemedText type="subtitle" style={styles.heading}>
-          {t("addWallet")}
-        </ThemedText>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={headerHeight}
+      >
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          <ThemedText type="subtitle" style={styles.heading}>
+            {t("addWallet")}
+          </ThemedText>
 
-        <WalletPreview
-          name={walletName.trim() || t("walletName")}
-          emoji={walletEmoji}
-          currencies={previewCurrencies}
-          ownerLabel={previewOwnerLabel}
-          memberUids={previewMemberUids}
-        />
-
-        <ThemedView style={styles.section}>
-          <ThemedText style={styles.sectionTitle}>{t("walletName")}</ThemedText>
-          <AuthInput
-            value={walletName}
-            onChangeText={setWalletName}
-            placeholder={t("walletNamePlaceholder")}
-            autoCapitalize="words"
+          <WalletPreview
+            name={walletName.trim() || t("walletName")}
+            emoji={walletEmoji}
+            currencies={previewCurrencies}
+            ownerLabel={previewOwnerLabel}
+            memberUids={previewMemberUids}
           />
-        </ThemedView>
 
-        <ThemedView style={styles.section}>
-          <ThemedText style={styles.sectionTitle}>{t("walletType")}</ThemedText>
-          <WalletTypeSelector
-            options={walletTypeOptions}
-            selectedType={walletType}
-            onSelect={setWalletType}
-          />
-        </ThemedView>
-
-        {isCreditWallet ? (
           <ThemedView style={styles.section}>
-            <ThemedText style={styles.sectionTitle}>{t("walletExpiry")} (MM/YY)</ThemedText>
+            <ThemedText style={styles.sectionTitle}>{t("walletName")}</ThemedText>
             <AuthInput
-              value={creditExpiry}
-              onChangeText={setCreditExpiry}
-              placeholder="12/30"
-              keyboardType="numeric"
-              autoCapitalize="none"
+              value={walletName}
+              onChangeText={setWalletName}
+              placeholder={t("walletNamePlaceholder")}
+              autoCapitalize="words"
             />
           </ThemedView>
-        ) : null}
 
-        {isSharedWallet ? (
-          <SharedMembersSection
-            title={t("addMembers")}
-            placeholder={t("searchByNameOrNumber")}
-            searchValue={sharedSearch}
-            selectedMemberUids={selectedMemberUids}
-            allUsers={allUsers}
-            suggestions={sharedSuggestions}
-            onSearchChange={setSharedSearch}
-            onRemoveMember={removeSharedMember}
-            onAddMember={addSharedMember}
+          <ThemedView style={styles.section}>
+            <ThemedText style={styles.sectionTitle}>{t("walletType")}</ThemedText>
+            <WalletTypeSelector
+              options={walletTypeOptions}
+              selectedType={walletType}
+              onSelect={setWalletType}
+            />
+          </ThemedView>
+
+          {isCreditWallet ? (
+            <ThemedView style={styles.section}>
+              <ThemedText style={styles.sectionTitle}>{t("walletExpiry")} (MM/YY)</ThemedText>
+              <AuthInput
+                value={creditExpiry}
+                onChangeText={setCreditExpiry}
+                placeholder="12/30"
+                keyboardType="numeric"
+                autoCapitalize="none"
+              />
+            </ThemedView>
+          ) : null}
+
+          {isSharedWallet ? (
+            <SharedMembersSection
+              title={t("addMembers")}
+              placeholder={t("searchByNameOrNumber")}
+              searchValue={sharedSearch}
+              selectedMemberUids={selectedMemberUids}
+              allUsers={allUsers}
+              suggestions={sharedSuggestions}
+              onSearchChange={setSharedSearch}
+              onRemoveMember={removeSharedMember}
+              onAddMember={addSharedMember}
+            />
+          ) : null}
+
+          <InitialBalancesSection
+            title={t("initialBalances")}
+            balances={startingBalances}
+            onAddBalance={addBalanceRow}
+            onCycleCurrency={cycleBalanceCurrency}
+            onAmountChange={updateBalanceAmount}
           />
-        ) : null}
 
-        <InitialBalancesSection
-          title={t("initialBalances")}
-          balances={startingBalances}
-          onAddBalance={addBalanceRow}
-          onCycleCurrency={cycleBalanceCurrency}
-          onAmountChange={updateBalanceAmount}
-        />
+          <ThemedView style={styles.section}>
+            <ThemedText style={styles.sectionTitle}>{t("chooseEmoji")}</ThemedText>
+            <EmojiSelector
+              options={EMOJI_OPTIONS}
+              selectedEmoji={walletEmoji}
+              onSelect={setWalletEmoji}
+            />
+          </ThemedView>
 
-        <ThemedView style={styles.section}>
-          <ThemedText style={styles.sectionTitle}>{t("chooseEmoji")}</ThemedText>
-          <EmojiSelector
-            options={EMOJI_OPTIONS}
-            selectedEmoji={walletEmoji}
-            onSelect={setWalletEmoji}
+          <GradientButton
+            label={t("createWallet")}
+            onPress={createWallet}
+            disabled={!canCreate}
+            style={{ marginTop: 10 }}
           />
-        </ThemedView>
 
-        <GradientButton
-          label={t("createWallet")}
-          onPress={createWallet}
-          disabled={!canCreate}
-          style={{ marginTop: 10 }}
-        />
-
-        <Pressable
-          onPress={() => router.back()}
-          style={({ pressed }) => [styles.cancel, pressed ? styles.pressed : null]}
-        >
-          <ThemedText type="defaultSemiBold" style={styles.cancelText}>
-            {t("cancel")}
-          </ThemedText>
-        </Pressable>
-      </ScrollView>
+          <Pressable
+            onPress={() => router.back()}
+            style={({ pressed }) => [styles.cancel, pressed ? styles.pressed : null]}
+          >
+            <ThemedText type="defaultSemiBold" style={styles.cancelText}>
+              {t("cancel")}
+            </ThemedText>
+          </Pressable>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </ThemedView>
   );
 }

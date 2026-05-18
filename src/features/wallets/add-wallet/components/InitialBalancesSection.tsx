@@ -1,10 +1,10 @@
-import React from "react";
 
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Pressable, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { AuthInput } from "@/components/ui/auth-input";
+import { useThemeColor } from "@/hooks/use-theme-color";
 
 import { styles } from "../styles";
 import type { BalanceRow } from "../types";
@@ -24,6 +24,9 @@ export function InitialBalancesSection({
   onCycleCurrency,
   onAmountChange,
 }: InitialBalancesSectionProps) {
+  const surfaceColor = useThemeColor({}, "surface");
+  const borderColor = useThemeColor({}, "border");
+
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeaderRow}>
@@ -32,7 +35,7 @@ export function InitialBalancesSection({
           onPress={onAddBalance}
           style={({ pressed }) => [styles.addCurrencyButton, pressed ? styles.pressed : null]}
         >
-          <MaterialIcons name="add" size={18} color="#fff" />
+          <MaterialIcons name="add" size={18} color="#6D28D9" />
         </Pressable>
       </View>
 
@@ -41,11 +44,13 @@ export function InitialBalancesSection({
           <View key={row.id} style={styles.balanceRow}>
             <Pressable
               onPress={() => onCycleCurrency(row.id)}
-              style={({ pressed }) => [styles.currencyPill, pressed ? styles.pressed : null]}
+              style={({ pressed }) => [
+                styles.currencyPill,
+                { backgroundColor: surfaceColor, borderColor },
+                pressed ? styles.pressed : null,
+              ]}
             >
-              <ThemedText type="defaultSemiBold" style={styles.currencyText}>
-                {row.currency.toUpperCase()}
-              </ThemedText>
+              <ThemedText type="defaultSemiBold">{row.currency.toUpperCase()}</ThemedText>
             </Pressable>
             <View style={{ flex: 1 }}>
               <AuthInput
