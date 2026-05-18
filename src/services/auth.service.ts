@@ -1,5 +1,6 @@
 import {
   createUserWithEmailAndPassword,
+  fetchSignInMethodsForEmail,
   signOut as firebaseSignOut,
   signInWithEmailAndPassword,
   UserCredential,
@@ -13,6 +14,11 @@ export async function signIn(email: string, pin: string): Promise<UserCredential
 
 export async function signUp(email: string, pin: string): Promise<UserCredential> {
   return createUserWithEmailAndPassword(auth, email.trim(), pin);
+}
+
+export async function isEmailInUse(email: string): Promise<boolean> {
+  const methods = await fetchSignInMethodsForEmail(auth, email.trim());
+  return methods.length > 0;
 }
 
 export function isEmailAlreadyInUseError(error: unknown) {

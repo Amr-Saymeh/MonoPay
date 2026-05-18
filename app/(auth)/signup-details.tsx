@@ -23,6 +23,8 @@ import {
   isValidEmail,
   type SignupValues,
 } from "@/src/features/auth/utils/signupValidation";
+import { isEmailAlreadyInUseError, isEmailInUse } from "@/src/services/auth.service";
+import { isUserEmailRegistered } from "@/src/services/user.service";
 
 export default function SignupDetailsScreen() {
   const { t, isRtl } = useI18n();
@@ -82,7 +84,7 @@ export default function SignupDetailsScreen() {
   );
   const canContinue = !currentValidationError && !formState.errors.email && !continuing;
 
-  const onContinue = handleSubmit((values) => {
+  const onContinue = handleSubmit(async (values) => {
     if (continuing) return;
 
     const error = getSignupValidationError(
@@ -104,8 +106,7 @@ export default function SignupDetailsScreen() {
       return;
     }
 
-    clear();
-    setDetails({
+    const nextDetails = {
       firstName: values.firstName.trim(),
       lastName: values.lastName.trim(),
       email: values.email.trim(),
@@ -113,12 +114,40 @@ export default function SignupDetailsScreen() {
       phone: values.phone.trim(),
       address: values.address.trim(),
       identityNumber: values.identityNumber.trim(),
-    });
+    };
 
     setContinuing(true);
-    requestAnimationFrame(() => {
-      router.push("/(tabs)/settings/category-suggestions" as any);
-    });
+
+    try {
+      const [registeredEmail, authReservedEmail] = await Promise.all([
+        isUserEmailRegistered(nextDetails.email),
+        isEmailInUse(nextDetails.email).catch(() => false),
+      ]);
+
+      const emailTaken = registeredEmail || authReservedEmail;
+
+      if (emailTaken) {
+        Alert.alert(t("error"), t("emailAlreadyRegistered"));
+        setContinuing(false);
+        return;
+      }
+
+      clear();
+      setDetails(nextDetails);
+
+      requestAnimationFrame(() => {
+        router.push("/(tabs)/settings/category-suggestions" as any);
+      });
+    } catch (error) {
+      const message = isEmailAlreadyInUseError(error)
+        ? t("emailAlreadyRegistered")
+        : error instanceof Error
+          ? error.message
+          : t("uploadFailed");
+
+      Alert.alert(t("error"), message || t("uploadFailed"));
+      setContinuing(false);
+    }
   });
 
   return (
