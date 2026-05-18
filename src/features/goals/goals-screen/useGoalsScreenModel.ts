@@ -30,7 +30,7 @@ export function useGoalsScreenModel() {
   const insets = useSafeAreaInsets();
   const { goals, totalSaved, totalTarget } = useGoalsQuery(user?.uid).data;
   const addContribution = useAddGoalContributionMutation(user?.uid);
-  const deleteGoal = useDeleteGoalMutation();
+  const deleteGoal = useDeleteGoalMutation(user?.uid);
   const feedbackState = useGoalsFeedback();
   const navigation = useGoalsNavigation();
   const { search, sorting, visibleGoals } = useGoalsSortingAndSearch(goals, t);

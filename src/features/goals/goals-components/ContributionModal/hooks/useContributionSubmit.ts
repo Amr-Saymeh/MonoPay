@@ -97,13 +97,18 @@ export function useContributionSubmit({
       setSubmitting(true);
       try {
         const newBalance = sourceWallet.balance - amountNum;
-        await update(ref(db, `wallets/${data.selectedWalletKey}`), {
+        await onSubmit(amountNum, data.reason.trim() || undefined);
+        update(ref(db, `wallets/${data.selectedWalletKey}`), {
           [`${sourceWallet.currencyContainer}/${sourceWallet.currencyKey}`]:
             newBalance,
+        }).catch((error) => {
+          console.warn(
+            "Contribution saved locally, but source wallet sync failed",
+            error,
+          );
         });
 
         hapticSuccess();
-        await onSubmit(amountNum, data.reason.trim() || undefined);
       } catch (error) {
         showError(t("error"), String(error));
       } finally {

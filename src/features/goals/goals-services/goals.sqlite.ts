@@ -1,6 +1,10 @@
 import * as SQLite from "expo-sqlite";
 
-import type { GoalRecord, GoalsSnapshot } from "./goals.service";
+import {
+  normalizeCurrencyCode,
+  type GoalRecord,
+  type GoalsSnapshot,
+} from "./goals.service";
 
 type GoalRow = {
   id: string;
@@ -72,6 +76,19 @@ function buildSnapshot(goals: GoalRecord[]): GoalsSnapshot {
   };
 }
 
+function mapRowToGoal(row: GoalRow): GoalRecord {
+  return {
+    id: row.id,
+    goal: row.goal ?? undefined,
+    goalTargetCurrency: row.goalTargetCurrency ?? undefined,
+    goalTargetAmount: row.goalTargetAmount ?? undefined,
+    goalTargetDate: row.goalTargetDate ?? undefined,
+    currentAmount: row.currentAmount ?? undefined,
+    members: safeParseRecord(row.membersJson) as Record<string, boolean> | undefined,
+    sharedLogs: safeParseRecord(row.sharedLogsJson),
+  };
+}
+
 export async function getCachedGoalsSnapshot(
   userUid: string,
 ): Promise<GoalsSnapshot | null> {
@@ -83,18 +100,96 @@ export async function getCachedGoalsSnapshot(
 
   if (rows.length === 0) return null;
 
-  const goals = rows.map((row) => ({
-    id: row.id,
-    goal: row.goal ?? undefined,
-    goalTargetCurrency: row.goalTargetCurrency ?? undefined,
-    goalTargetAmount: row.goalTargetAmount ?? undefined,
-    goalTargetDate: row.goalTargetDate ?? undefined,
-    currentAmount: row.currentAmount ?? undefined,
-    members: safeParseRecord(row.membersJson),
-    sharedLogs: safeParseRecord(row.sharedLogsJson),
-  }));
+  const goals = rows.map(mapRowToGoal);
 
   return buildSnapshot(goals);
+}
+
+export async function upsertCachedGoal(
+  userUid: string,
+  goal: GoalRecord,
+): Promise<GoalRecord> {
+  const database = await initGoalsCache();
+  const existingRow = await database.getFirstAsync<GoalRow>(
+    "SELECT * FROM goals_cache WHERE id = ? AND userUid = ?",
+    goal.id,
+    userUid,
+  );
+  const existingGoal = existingRow ? mapRowToGoal(existingRow) : undefined;
+  const nextGoal: GoalRecord = {
+    ...existingGoal,
+    ...goal,
+    id: goal.id,
+    members: goal.members ?? existingGoal?.members ?? { [userUid]: true },
+    sharedLogs: goal.sharedLogs ?? existingGoal?.sharedLogs ?? {},
+  };
+
+  await database.runAsync(
+    `INSERT OR REPLACE INTO goals_cache (
+      id,
+      userUid,
+      goal,
+      goalTargetCurrency,
+      goalTargetAmount,
+      goalTargetDate,
+      currentAmount,
+      membersJson,
+      sharedLogsJson,
+      cachedAt
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    nextGoal.id,
+    userUid,
+    nextGoal.goal ?? null,
+    nextGoal.goalTargetCurrency ?? null,
+    nextGoal.goalTargetAmount ?? null,
+    nextGoal.goalTargetDate ?? null,
+    nextGoal.currentAmount ?? null,
+    JSON.stringify(nextGoal.members ?? {}),
+    JSON.stringify(nextGoal.sharedLogs ?? {}),
+    Date.now(),
+  );
+
+  return nextGoal;
+}
+
+export async function deleteCachedGoal(
+  userUid: string,
+  goalId: string,
+): Promise<void> {
+  const database = await initGoalsCache();
+  await database.runAsync(
+    "DELETE FROM goals_cache WHERE id = ? AND userUid = ?",
+    goalId,
+    userUid,
+  );
+}
+
+export async function addCachedGoalContribution(params: {
+  userUid: string;
+  goal: GoalRecord;
+  amount: number;
+  reason?: string;
+}): Promise<GoalRecord> {
+  const { userUid, goal, amount, reason } = params;
+  const currency = normalizeCurrencyCode(goal.goalTargetCurrency) || "usd";
+  const createdAt = Date.now();
+  const currentAmount = Number(goal.currentAmount || 0) + amount;
+  const sharedLogs = {
+    ...(goal.sharedLogs ?? {}),
+    [createdAt]: {
+      amount,
+      currency,
+      reason: reason || "",
+      userUid,
+      createdAt,
+    },
+  };
+
+  return upsertCachedGoal(userUid, {
+    ...goal,
+    currentAmount,
+    sharedLogs,
+  });
 }
 
 export async function saveGoalsSnapshotToCache(
