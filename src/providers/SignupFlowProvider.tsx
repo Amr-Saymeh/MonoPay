@@ -1,9 +1,9 @@
 import React, {
-    createContext,
-    useCallback,
-    useContext,
-    useMemo,
-    useState,
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
 } from "react";
 
 type SignupDetails = {
@@ -30,11 +30,7 @@ type SignupFlowContextValue = {
 
 const SignupFlowContext = createContext<SignupFlowContextValue | null>(null);
 
-export function SignupFlowProvider({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export function SignupFlowProvider({children}: {children: React.ReactNode}) {
   const [details, setDetailsState] = useState<SignupDetails | null>(null);
   const [identityImageUri, setIdentityImageUriState] = useState<string | null>(
     null,

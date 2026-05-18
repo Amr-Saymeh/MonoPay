@@ -9,7 +9,7 @@ export type SignupValues = {
   pin: string;
 };
 
-export function sanitizeEmailInput(email: string) {
+export function cleanEmailInput(email: string) {
   return email.replace(/[^\x00-\x7F]/g, "");
 }
 

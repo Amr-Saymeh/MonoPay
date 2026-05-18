@@ -1,12 +1,3 @@
-import { useNavigation } from "@react-navigation/native";
-import { useRouter } from "expo-router";
-import { useEffect } from "react";
-
-import { LayoutChangeEvent, ScrollView } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-
-import { Colors } from "@/constants/theme";
-import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useI18n } from "@/hooks/use-i18n";
 import { InsightsLoading } from "@/src/features/insights/components/InsightsLoading";
 import {
@@ -17,63 +8,26 @@ import {
   InsightsGrid,
   MetricsSection,
 } from "@/src/features/insights/components/InsightsSections";
-import { useInsightsScreenState } from "@/src/features/insights/hooks/useInsightsScreenState";
+import { useInsightsPalette } from "@/src/features/insights/hooks/useInsightsPalette";
 import { useSpendingInsightsData } from "@/src/features/insights/hooks/useSpendingInsightsData";
 import { styles } from "@/src/features/insights/styles";
+import { ChartView, FlowFilter, SortMode, TimeWindow } from "@/src/features/insights/utils/insights";
 import { useAuth } from "@/src/providers/AuthProvider";
+import { useState } from "react";
+import { LayoutChangeEvent, ScrollView } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function SpendingInsightsScreen() {
-  const navigation = useNavigation();
-  const router = useRouter();
-  const scheme = useColorScheme() ?? "light";
   const { user, profile } = useAuth();
   const { t, language, isRtl } = useI18n();
-  const colors = Colors[scheme];
-
-  useEffect(() => {
-    const unsubscribe = navigation.addListener("beforeRemove", (event) => {
-      const actionType = event.data.action?.type;
-
-      if (actionType !== "GO_BACK" && actionType !== "POP" && actionType !== "POP_TO_TOP") {
-        return;
-      }
-
-      event.preventDefault();
-      router.back();
-    });
-
-    return unsubscribe;
-  }, [navigation, router]);
-
-  const {
-    category,
-    chart,
-    chartWidth,
-    currency,
-    flow,
-    setCategory,
-    setChart,
-    setChartWidth,
-    setCurrency,
-    setFlow,
-    setSortMode,
-    setWindow,
-    sortMode,
-    window,
-  } = useInsightsScreenState();
-
-  const palette = {
-    bg: colors.background,
-    blue: "#38BDF8",
-    card: scheme === "dark" ? "#12171E" : "#FFFFFF",
-    border: colors.border,
-    colorsText: colors.text,
-    green: "#22C55E",
-    muted: scheme === "dark" ? "rgba(236,237,238,0.65)" : "rgba(17,24,28,0.55)",
-    orange: "#F97316",
-    purple: "#A855F7",
-    scheme,
-  } as const;
+  const palette = useInsightsPalette();
+  const [timeWindow, setTimeWindow] = useState<TimeWindow>("30D");
+  const [flow, setFlow] = useState<FlowFilter>("all");
+  const [currency, setCurrency] = useState("ALL");
+  const [category, setCategory] = useState("ALL");
+  const [chart, setChart] = useState<ChartView>("categories");
+  const [sortMode, setSortMode] = useState<SortMode>("recent");
+  const [chartWidth, setChartWidth] = useState(0);
 
   const {
     avg,
@@ -81,6 +35,7 @@ export default function SpendingInsightsScreen() {
     busiestDay,
     categories,
     categoryBaseTotal,
+    conversionLoaded,
     currencies,
     filtered,
     health,
@@ -103,12 +58,12 @@ export default function SpendingInsightsScreen() {
     selectedCategories: profile?.categories ?? [],
     sortMode,
     uid: user?.uid,
-    window,
+    window: timeWindow,
   });
 
-  const primaryCurrency = currency !== "ALL" ? currency : (currencies[0] ?? "USD");
+  const primaryCurrency = currency !== "ALL" ? currency : "NIS";
 
-  if (!loaded) {
+  if (!loaded || (currency === "ALL" && !conversionLoaded)) {
     return (
       <InsightsLoading
         backgroundColor={palette.bg}
@@ -157,8 +112,8 @@ export default function SpendingInsightsScreen() {
           setChart={setChart}
           setCurrency={setCurrency}
           setFlow={setFlow}
-          setWindow={setWindow}
-          window={window}
+          setWindow={setTimeWindow}
+          window={timeWindow}
         />
 
         <ChartsSection

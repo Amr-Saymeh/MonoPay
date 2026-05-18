@@ -6,11 +6,11 @@ import { useAuth } from "@/src/providers/AuthProvider";
 import { useSignupFlow } from "@/src/providers/SignupFlowProvider";
 import { updateUserProfile } from "@/src/services/user.service";
 
-import { getInitialSelectedCategories } from "../utils/categorySuggestions";
+import { getInitialSelectedCategories } from "../utils/categoryUtils";
 
 const EMPTY_CATEGORIES: string[] = [];
 
-export function useCategorySuggestions() {
+export function useCategoryData() {
   const { language } = useI18n();
   const { user, profile, initializing, profileLoaded } = useAuth();
   const signup = useSignupFlow();

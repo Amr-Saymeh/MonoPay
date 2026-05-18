@@ -82,7 +82,9 @@ export type TranslationKey =
   | "editProfile"
   | "account"
   | "paymentMethods"
+  | "paymentMethodsSavedCount"
   | "categories"
+  | "manageCategories"
   | "allCategories"
   | "searchCategories"
   | "addCustomCategory"
@@ -104,6 +106,9 @@ export type TranslationKey =
   | "logoutConfirmTitle"
   | "logoutConfirmMessage"
   | "logout"
+  | "failedToSignOut"
+  | "languageEnglishUs"
+  | "languageArabic"
   | "error"
   | "failedToSignIn"
   | "captureFailed"
@@ -471,7 +476,7 @@ export const translations: Record<
     firstName: "First name",
     lastName: "Last name",
     address: "Address",
-    idNumber: "ID number",
+    idNumber: "National ID number",
     continue: "Continue",
     login: "Login",
     noAccount: "No Account?",
@@ -489,7 +494,9 @@ export const translations: Record<
     editProfile: "Edit Profile",
     account: "Account",
     paymentMethods: "Payment Methods",
+    paymentMethodsSavedCount: "{count} cards saved",
     categories: "Categories",
+    manageCategories: "Manage categories",
     allCategories: "All Categories",
     searchCategories: "Search categories...",
     addCustomCategory: "Add Custom Category",
@@ -512,13 +519,16 @@ export const translations: Record<
     logoutConfirmTitle: "Log out",
     logoutConfirmMessage: "Are you sure you want to log out?",
     logout: "Logout",
+    failedToSignOut: "Failed to sign out.",
+    languageEnglishUs: "English (US)",
+    languageArabic: "Arabic",
     error: "Error",
     failedToSignIn: "Failed to sign in.",
     captureFailed: "Failed to capture image.",
     missingSignupData: "Missing signup data.",
     emailAlreadyRegistered: "This email is already registered",
     invalidEmail: "Invalid email address",
-    invalidIdNumber: "Invalid ID number",
+    invalidIdNumber: "Invalid National ID number",
     pinMismatch: "PIN does not match",
     pinTooShort: "PIN must be at least 6 digits",
     required: "This field is required",
@@ -895,7 +905,9 @@ export const translations: Record<
     editProfile: "تعديل الملف الشخصي",
     account: "الحساب",
     paymentMethods: "طرق الدفع",
+    paymentMethodsSavedCount: "{count} بطاقات محفوظة",
     categories: "الفئات",
+    manageCategories: "إدارة الفئات",
     allCategories: "جميع الفئات",
     searchCategories: "ابحث عن فئة...",
     addCustomCategory: "أضف فئة مخصصة",
@@ -918,6 +930,9 @@ export const translations: Record<
     logoutConfirmTitle: "تسجيل الخروج",
     logoutConfirmMessage: "هل أنت متأكد أنك تريد تسجيل الخروج؟",
     logout: "تسجيل الخروج",
+    failedToSignOut: "فشل تسجيل الخروج",
+    languageEnglishUs: "الإنجليزية (أمريكا)",
+    languageArabic: "العربية",
     error: "خطأ",
     failedToSignIn: "فشل تسجيل الدخول",
     captureFailed: "فشل التقاط الصورة",

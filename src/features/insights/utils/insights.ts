@@ -17,6 +17,7 @@ export type Entry = {
   id: string;
   source: "transaction" | "purchase" | "income";
   amount: number;
+  aggregateAmount?: number;
   currency: string;
   type: "send" | "receive";
   title: string;
@@ -398,9 +399,14 @@ function getFallbackStyle(key: string) {
 }
 
 export function normalizeCurrency(value: unknown) {
-  return String(value ?? "USD")
+  const normalized = String(value ?? "USD")
     .trim()
     .toUpperCase();
+
+  if (normalized === "ILS") return "NIS";
+  if (normalized === "JOS") return "JOD";
+
+  return normalized;
 }
 
 export function normalizeCategory(raw: unknown, language: SupportedLanguage) {
@@ -456,6 +462,10 @@ export function money(amount: number, currency: string) {
   })}`;
 }
 
+export function getEntryAggregateAmount(entry: Entry) {
+  return Number.isFinite(entry.aggregateAmount) ? Number(entry.aggregateAmount) : entry.amount;
+}
+
 export function startWindow(window: TimeWindow) {
   if (window === "ALL") return 0;
   const day = 24 * 60 * 60 * 1000;
@@ -487,19 +497,18 @@ export function belongsToUserPurchase(raw: any, uid: string) {
   return (
     keys.some((key) => String(raw?.[key] ?? "") === uid) ||
     Boolean(raw?.members?.[uid]) ||
-    (Array.isArray(raw?.participants) && raw.participants.includes(uid)) ||
-    !hasExplicitOwner
-  );
+    (Array.isArray(raw?.participants) && raw.participants.includes(uid)));
 }
 
 export function buildBreakdown(entries: Entry[]) {
   const map = new Map<string, BreakdownItem>();
 
   entries.forEach((item) => {
+    const amount = getEntryAggregateAmount(item);
     map.set(item.categoryKey, {
       key: item.categoryKey,
       label: item.categoryLabel,
-      amount: (map.get(item.categoryKey)?.amount ?? 0) + item.amount,
+      amount: (map.get(item.categoryKey)?.amount ?? 0) + amount,
       color: item.color,
       icon: item.icon,
     });
@@ -518,9 +527,10 @@ export function buildWeekday(entries: Entry[]) {
 
   entries.forEach((item) => {
     const day = new Date(item.timestamp).getDay();
+    const amount = getEntryAggregateAmount(item);
     weekday[day].count += 1;
-    if (item.type === "send") weekday[day].spend += item.amount;
-    else weekday[day].income += item.amount;
+    if (item.type === "send") weekday[day].spend += amount;
+    else weekday[day].income += amount;
   });
 
   return weekday;
@@ -555,10 +565,10 @@ export function buildTrend(
           : `${new Date(from).getDate()}/${new Date(from).getMonth() + 1}`,
       spend: items
         .filter((item) => item.type === "send")
-        .reduce((sum, item) => sum + item.amount, 0),
+        .reduce((sum, item) => sum + getEntryAggregateAmount(item), 0),
       income: items
         .filter((item) => item.type === "receive")
-        .reduce((sum, item) => sum + item.amount, 0),
+        .reduce((sum, item) => sum + getEntryAggregateAmount(item), 0),
     } satisfies TrendItem;
   });
 }
