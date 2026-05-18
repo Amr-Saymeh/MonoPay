@@ -35,7 +35,7 @@ export default function MenuList() {
         showsVerticalScrollIndicator={false}
       >
         {menuItems
-          .filter((item) => item.id !== '7')
+          .filter((item) => item.id !== '7' && item.id !== '10')
           .map((item, index) => (
             <TouchableOpacity
               key={item.id}

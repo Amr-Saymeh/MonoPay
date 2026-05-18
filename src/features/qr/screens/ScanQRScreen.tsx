@@ -45,13 +45,19 @@ export default function ScanQRScreen() {
   const { language, isRtl } = useI18n();
   const { colorScheme } = useThemeMode();
   const isDark = colorScheme === "dark";
+
   const s = STRINGS[language as "en" | "ar"] ?? STRINGS.en;
 
+  // Current signed-in user ID, used to block self-payments.
   const currentUid = user?.uid ?? "";
+  // Shows a loading state while the scanned QR is resolved in Firebase.
   const [resolving, setResolving] = useState(false);
+  // Controls the feedback modal for scan errors and status messages.
   const [notif, setNotif] = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
+  // Validates the scanned QR value, fetches the target user, then opens the send screen.
   const handleScanned = async (scannedValue: string) => {
+    // QR codes store the receiver UID as plain text.
     const uid = scannedValue.trim();
 
     // First guard: prevent sending to yourself.
@@ -63,6 +69,7 @@ export default function ScanQRScreen() {
     setResolving(true);
 
     try {
+      // Load the scanned user document from Realtime Database.
       const snap = await get(ref(db, `users/${uid}`));
 
       // Second guard: the QR must belong to an active MonoPay user (type === 1).
@@ -129,10 +136,12 @@ export default function ScanQRScreen() {
         </View>
       </LinearGradient>
 
+      {/* Notification Modal to display error message about user data fetch from firebase relative to the qr scanner */}
       <NotificationModal
         visible={!!notif}
         type={notif?.type ?? "error"}
         message={notif?.msg ?? ""}
+        // Clear the modal state after the user dismisses it.
         onDismiss={() => setNotif(null)}
         language={language as "en" | "ar"}
       />
@@ -147,6 +156,7 @@ export default function ScanQRScreen() {
             </View>
           </View>
         ) : (
+          // Main: to show the camera view and handle the qr scanning.
           <QRScanner
             onScanned={handleScanned}
             isRtl={isRtl}

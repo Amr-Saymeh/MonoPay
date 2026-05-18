@@ -95,6 +95,7 @@ export default function MyQRScreen() {
             size={220}
             isRtl={isRtl}
             language={language as "en" | "ar"}
+            isDark={isDark}
           />
         </View>
 

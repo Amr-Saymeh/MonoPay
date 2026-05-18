@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Controller, type FieldErrors, useForm, useWatch } from "react-hook-form";
 import {
@@ -33,6 +33,7 @@ import { AppUser, Category, Currency, CURRENCY_SYMBOLS } from "../types";
 const STRINGS = {
   en: {
     title: "Send Money",
+    qrTitle: "Send via QR",
     amount: "Amount",
     recipient: "Recipient",
     selectRecipient: "Who are you sending to?",
@@ -46,6 +47,7 @@ const STRINGS = {
     mainWalletNote: "Funds go to recipient's main wallet automatically",
     successSend: "Money sent successfully!",
     fillRequired: "Please select a recipient and enter an amount.",
+    qrFillRequired: "Please select a wallet and enter an amount.",
     errors: {
       INSUFFICIENT_FUNDS: "Insufficient funds in your wallet.",
       WALLET_INACTIVE: "Your wallet is inactive.",
@@ -58,6 +60,7 @@ const STRINGS = {
   },
   ar: {
     title: "إرسال المال",
+    qrTitle: "إرسال عبر QR",
     amount: "المبلغ",
     recipient: "المستلم",
     selectRecipient: "لمن تريد الإرسال؟",
@@ -71,6 +74,7 @@ const STRINGS = {
     mainWalletNote: "سيتم الإرسال للمحفظة الرئيسية للمستلم تلقائياً",
     successSend: "تم الإرسال بنجاح!",
     fillRequired: "الرجاء اختيار مستلم وإدخال المبلغ.",
+    qrFillRequired: "الرجاء اختيار محفظة وإدخال المبلغ.",
     errors: {
       INSUFFICIENT_FUNDS: "الرصيد غير كافٍ في محفظتك.",
       WALLET_INACTIVE: "محفظتك غير نشطة.",
@@ -112,6 +116,32 @@ export default function SendMoneyScreen() {
   const isDark = colorScheme === "dark";
   // s to get the strings (placeholders, titles, errors, etc) of the current language
   const s = STRINGS[language as "en" | "ar"] ?? STRINGS.en;
+  // QR====================================================================
+  // If this screen is opened from /qr-send, these params identify the scanned user.
+  const {
+    uid: qrUid,
+    name: qrName,
+    number: qrNumber,
+  } = useLocalSearchParams<{
+    uid?: string;
+    name?: string;
+    number?: string;
+  }>();
+  // QR mode means the recipient comes from the scanned code instead of UserPicker.
+  const isQrMode = typeof qrUid === "string" && qrUid.length > 0;
+  const qrRecipient: AppUser | null = isQrMode
+    ? {
+        uid: qrUid,
+        name: typeof qrName === "string" ? qrName : "",
+        number: typeof qrNumber === "string" ? qrNumber : "",
+        type: 1,
+      }
+    : null;
+  // Use QR-specific title and required message without affecting normal send behavior.
+  const screenTitle = isQrMode ? s.qrTitle : s.title;
+  const requiredMessage = isQrMode ? s.qrFillRequired : s.fillRequired;
+  // end QR====================================================================
+ 
   // amountAnim to animate the amount input
   const amountAnim = useRef(new Animated.Value(0)).current;
   // showConfirm is a state that is used to show or hide the ConfirmBottomSheet
@@ -173,6 +203,19 @@ export default function SendMoneyScreen() {
   // myWalletSlot is a slot that contains wallet information
   const myWalletSlot = useWatch({ control, name: "walletSlot" }) ?? null;
 
+  // QR====================================================================
+  // Keep the existing send flow untouched by filling selectedUser automatically
+  // when the screen is opened from a scanned QR code.
+  useEffect(() => {
+    if (!isQrMode || !qrRecipient) return;
+
+    setValue("selectedUser", qrRecipient, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+  }, [isQrMode, qrRecipient, setValue]);
+  // end QR====================================================================
+
   // useEffect hook is a side effect hook that is used to perform side effects.
   // In this case, it is used to make a smooth animation for the amount input when the myWalletSlot is selected.
   useEffect(() => {
@@ -210,7 +253,7 @@ export default function SendMoneyScreen() {
         //if the first error is not found then check the next one and so on
         formErrors.amount?.message,
         formErrors.walletSlot?.message,
-        formErrors.selectedUser?.message,
+        !isQrMode ? formErrors.selectedUser?.message : undefined,
         formErrors.note?.message,
       ];
 
@@ -220,7 +263,7 @@ export default function SendMoneyScreen() {
 
       return firstMessage ?? s.errors.UNKNOWN;
     },
-    [s.errors.UNKNOWN],
+    [isQrMode, s.errors.UNKNOWN],
   );
 
   /**
@@ -247,7 +290,7 @@ export default function SendMoneyScreen() {
 
     if (!values.walletSlot || !values.selectedUser) {
       setShowConfirm(false);
-      setNotif({ type: "error", msg: s.fillRequired });
+      setNotif({ type: "error", msg: requiredMessage });
       return;
     }
 
@@ -313,7 +356,7 @@ export default function SendMoneyScreen() {
                 },
               ]}
             >
-              {s.title}
+              {screenTitle}
             </Text>
           </View>
         </LinearGradient>
@@ -438,50 +481,117 @@ export default function SendMoneyScreen() {
               </Animated.View>
             )}
 
-            <View style={styles.section}>
-              <Label text={s.recipient} isRtl={isRtl} isDark={isDark} />
-              <Controller
-                control={control}
-                name="selectedUser"
-                rules={{
-                  // validate that the recipient is not empty
-                  // || we do it when the first condition is false
-                  validate: (value) => value !== null || s.fillRequired,
-                }}
-                render={({ field: { value, onChange } }) => (
-                  <UserPicker
-                    label={s.recipient}
-                    placeholder={s.selectRecipient}
-                    selectedUser={value}
-                    currentUserUid={currentUserUid}
-                    onSelect={onChange}
-                    isRtl={isRtl}
-                    language={language as "en" | "ar"}
-                  />
-                )}
-              />
-              <ErrorText message={errors.selectedUser?.message} isRtl={isRtl} />
-              <View
-                style={[
-                  styles.infoBar,
-                  { flexDirection: isRtl ? "row-reverse" : "row" },
-                ]}
-              >
-                <Ionicons
-                  name="information-circle"
-                  size={16}
-                  color="#7C3AED"
+            {!isQrMode ? (
+              <View style={styles.section}>
+                <Label text={s.recipient} isRtl={isRtl} isDark={isDark} />
+                <Controller
+                  control={control}
+                  name="selectedUser"
+                  rules={{
+                    // validate that the recipient is not empty
+                    // || we do it when the first condition is false
+                    validate: (value) => value !== null || requiredMessage,
+                  }}
+                  render={({ field: { value, onChange } }) => (
+                    <UserPicker
+                      label={s.recipient}
+                      placeholder={s.selectRecipient}
+                      selectedUser={value}
+                      currentUserUid={currentUserUid}
+                      onSelect={onChange}
+                      isRtl={isRtl}
+                      language={language as "en" | "ar"}
+                    />
+                  )}
                 />
-                <Text
+                <ErrorText message={errors.selectedUser?.message} isRtl={isRtl} />
+                <View
                   style={[
-                    styles.infoText,
-                    { textAlign: isRtl ? "right" : "left" },
+                    styles.infoBar,
+                    { flexDirection: isRtl ? "row-reverse" : "row" },
                   ]}
                 >
-                  {s.mainWalletNote}
-                </Text>
+                  <Ionicons
+                    name="information-circle"
+                    size={16}
+                    color="#7C3AED"
+                  />
+                  <Text
+                    style={[
+                      styles.infoText,
+                      { textAlign: isRtl ? "right" : "left" },
+                    ]}
+                  >
+                    {s.mainWalletNote}
+                  </Text>
+                </View>
               </View>
-            </View>
+            ) : (
+              // QR====================================================================
+              // In QR mode the recipient is fixed, so we show a locked card
+              // instead of the normal UserPicker.
+              <View style={styles.section}>
+                <Label text={s.recipient} isRtl={isRtl} isDark={isDark} />
+                <View
+                  style={[
+                    styles.qrRecipientCard,
+                    isDark && styles.qrRecipientCardDark,
+                    { flexDirection: isRtl ? "row-reverse" : "row" },
+                  ]}
+                >
+                  <View style={styles.qrAvatar}>
+                    <Text style={styles.qrAvatarText}>
+                      {(qrRecipient?.name ?? "?").charAt(0).toUpperCase()}
+                    </Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      style={[
+                        styles.qrRecipientName,
+                        isDark && styles.qrRecipientNameDark,
+                        { textAlign: isRtl ? "right" : "left" },
+                      ]}
+                    >
+                      {qrRecipient?.name ?? ""}
+                    </Text>
+                    {!!qrRecipient?.number && (
+                      <Text
+                        style={[
+                          styles.qrRecipientNumber,
+                          { textAlign: isRtl ? "right" : "left" },
+                        ]}
+                      >
+                        {String(qrRecipient.number)}
+                      </Text>
+                    )}
+                  </View>
+                  <View style={styles.qrLockBadge}>
+                    <Ionicons name="lock-closed" size={14} color="#7C3AED" />
+                  </View>
+                </View>
+                <View
+                  style={[
+                    styles.infoBar,
+                    { flexDirection: isRtl ? "row-reverse" : "row" },
+                  ]}
+                >
+                  <Ionicons
+                    name="information-circle"
+                    size={16}
+                    color="#7C3AED"
+                  />
+                  <Text
+                    style={[
+                      styles.infoText,
+                      { textAlign: isRtl ? "right" : "left" },
+                    ]}
+                  >
+                    {s.mainWalletNote}
+                  </Text>
+                </View>
+              </View>
+              // QR====================================================================
+            )}
 
             <View style={styles.section}>
               <Label text={s.category} isRtl={isRtl} isDark={isDark} />
@@ -576,7 +686,17 @@ export default function SendMoneyScreen() {
         onDismiss={() => {
           const wasSuccess = notif?.type === "success";
           setNotif(null);
-          if (wasSuccess) resetForm();
+          if (wasSuccess) {
+            // QR====================================================================
+            // QR flow should return to the previous screen after success
+            // instead of resetting the normal send form in place.
+            if (isQrMode) {
+              router.back();
+              return;
+            }
+            // QR====================================================================
+            resetForm();
+          }
         }}
         language={language as "en" | "ar"}
       />
@@ -740,6 +860,62 @@ const styles = StyleSheet.create({
     flex: 1,
     lineHeight: 18,
   },
+  // QR====================================================================
+  // Dedicated styles for the locked recipient card shown only in QR mode.
+  qrRecipientCard: {
+    backgroundColor: "white",
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    alignItems: "center",
+    gap: 12,
+    shadowColor: "#7C3AED",
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: "rgba(124,58,237,0.06)",
+  },
+  qrRecipientCardDark: {
+    backgroundColor: "#1C1F2A",
+    borderColor: "rgba(255,255,255,0.07)",
+  },
+  qrAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: "#7C3AED",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  qrAvatarText: {
+    color: "white",
+    fontWeight: "bold",
+    fontSize: 18,
+  },
+  qrRecipientName: {
+    color: "#1F2937",
+    fontWeight: "700",
+    fontSize: 16,
+  },
+  qrRecipientNameDark: {
+    color: "#E0E0E0",
+  },
+  qrRecipientNumber: {
+    color: "#9CA3AF",
+    fontSize: 13,
+    marginTop: 2,
+  },
+  qrLockBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: "#F5F3FF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  // QR====================================================================
   noteBox: {
     backgroundColor: "white",
     borderRadius: 18,
