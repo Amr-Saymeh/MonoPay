@@ -57,6 +57,21 @@ export async function getUserProfile(uid: string) {
   return (snap.val() ?? null) as UserProfile | null;
 }
 
+export async function isUserEmailRegistered(email: string) {
+  const normalizedEmail = email.trim().toLowerCase();
+
+  if (!normalizedEmail) {
+    return false;
+  }
+
+  const snap = await get(ref(db, "users"));
+  const users = (snap.val() ?? {}) as Record<string, UserProfile | null>;
+
+  return Object.values(users).some(
+    (profile) => String(profile?.email ?? "").trim().toLowerCase() === normalizedEmail,
+  );
+}
+
 export function subscribeUserProfile(
   uid: string,
   onChange: (profile: UserProfile | null) => void,
