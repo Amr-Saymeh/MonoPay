@@ -1,12 +1,16 @@
 import { Ionicons } from "@expo/vector-icons";
+import BottomSheet, {
+  BottomSheetBackdrop,
+  BottomSheetView,
+} from "@gorhom/bottom-sheet";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { ref, update } from "firebase/database";
-import React, { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Alert,
   Animated,
   FlatList,
+  Modal,
   Platform,
   StatusBar,
   StyleSheet,
@@ -17,9 +21,13 @@ import {
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 import { useI18n } from "@/hooks/use-i18n";
+import { useThemeMode } from "@/src/providers/ThemeModeProvider";
 import { NotificationModal } from "@/src/features/transfer/components/NotificationModal";
 import { WalletPicker } from "@/src/features/transfer/components/WalletPicker";
-import { useUserWallets } from "@/src/features/transfer/hooks/useUserWallets";
+import {
+  EnrichedWalletSlot,
+  useUserWallets,
+} from "@/src/features/transfer/hooks/useUserWallets";
 import {
   approveRequest,
   rejectRequest,
@@ -49,13 +57,21 @@ const STRINGS = {
     cancel: "Cancel",
     rejectTitle: "Reject Request",
     rejectMsg: (name: string) => `Reject payment request from ${name}?`,
+    rejectConfirm: "Yes, Reject",
     cancelTitle: "Cancel Request",
     cancelMsg: "Cancel this money request?",
+    cancelConfirm: "Yes, Cancel",
     success: "Done!",
     error: "Something went wrong. Please try again.",
     balance: "Your balance",
     required: "Required",
     insufficientBalance: "Insufficient balance in this wallet",
+    requester: "Requester",
+    from: "From Wallet",
+    category: "Category",
+    note: "Note",
+    noNote: "No note",
+    processing: "Processing...",
   },
   ar: {
     title: "الطلبات",
@@ -73,15 +89,28 @@ const STRINGS = {
     cancel: "إلغاء",
     rejectTitle: "رفض الطلب",
     rejectMsg: (name: string) => `رفض طلب المال من ${name}؟`,
+    rejectConfirm: "نعم، رفض",
     cancelTitle: "إلغاء الطلب",
     cancelMsg: "إلغاء هذا الطلب؟",
+    cancelConfirm: "نعم، إلغاء",
     success: "تمّ!",
     error: "حدث خطأ. حاول مرة أخرى.",
     balance: "رصيدك الحالي",
     required: "المطلوب",
     insufficientBalance: "رصيد غير كافٍ في هذه المحفظة",
+    requester: "صاحب الطلب",
+    from: "من محفظة",
+    category: "الفئة",
+    note: "ملاحظة",
+    noNote: "لا توجد ملاحظة",
+    processing: "جاري المعالجة...",
   },
 };
+
+type ConfirmActionState =
+  | { type: "reject"; item: MoneyRequestItem }
+  | { type: "cancel"; item: MoneyRequestItem }
+  | null;
 
 export default function RequestsScreen() {
   const { user } = useAuth();
@@ -89,6 +118,8 @@ export default function RequestsScreen() {
 
   const router = useRouter();
   const { language, isRtl } = useI18n();
+  const { colorScheme } = useThemeMode();
+  const isDark = colorScheme === "dark";
   const s = STRINGS[language as "en" | "ar"] ?? STRINGS.en;
 
   const [activeTab, setActiveTab] = useState<"received" | "sent">("received");
@@ -96,7 +127,10 @@ export default function RequestsScreen() {
 
   const [notif, setNotif] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const [approveItem, setApproveItem] = useState<MoneyRequestItem | null>(null);
-  const [selectedSlot, setSelectedSlot] = useState<any>(null);
+  const [selectedSlot, setSelectedSlot] = useState<EnrichedWalletSlot | null>(
+    null,
+  );
+  const [confirmAction, setConfirmAction] = useState<ConfirmActionState>(null);
 
   const { received, sent, loading } = useMoneyRequests(CURRENT_USER_UID);
   const { wallets: myWallets, loading: walletsLoading } =
@@ -122,10 +156,12 @@ export default function RequestsScreen() {
 
   // ── Approve ───────────────────────────────────────────────────────────────
   const handleApprove = (item: MoneyRequestItem) => {
+    // Pre-select the user's main wallet (wallet1) as the default payment source.
     setApproveItem(item);
     setSelectedSlot(myWallets.find((w) => w.slotKey === "wallet1") ?? null);
   };
 
+  // Executes the actual money movement after the payer confirms their wallet choice.
   const confirmApprove = async () => {
     if (!approveItem || !selectedSlot) return;
     setActionLoading(true);
@@ -151,55 +187,50 @@ export default function RequestsScreen() {
 
   // ── Reject ────────────────────────────────────────────────────────────────
   const handleReject = (item: MoneyRequestItem) => {
-    Alert.alert(s.rejectTitle, s.rejectMsg(item.otherPartyName ?? ""), [
-      { text: s.cancel, style: "cancel" },
-      {
-        text: s.rejectTitle,
-        style: "destructive",
-        onPress: async () => {
-          setActionLoading(true);
-          const result = await rejectRequest(
-            CURRENT_USER_UID,
-            item.fromUserId,
-            item.id,
-          );
-          setActionLoading(false);
-          if (result.success) setNotif({ type: "success", msg: s.success });
-          else setNotif({ type: "error", msg: s.error });
-        },
-      },
-    ]);
+    setConfirmAction({ type: "reject", item });
   };
 
   // ── Cancel (sent) ─────────────────────────────────────────────────────────
   const handleCancel = (item: MoneyRequestItem) => {
-    Alert.alert(s.cancelTitle, s.cancelMsg, [
-      { text: s.cancel, style: "cancel" },
-      {
-        text: s.cancelTitle,
-        style: "destructive",
-        onPress: async () => {
-          setActionLoading(true);
-          try {
-            const now = Date.now();
-            await update(ref(db), {
-              [`users/${CURRENT_USER_UID}/moneyRequests/${item.id}/status`]:
-                "cancelled",
-              [`users/${CURRENT_USER_UID}/moneyRequests/${item.id}/decidedAt`]:
-                now,
-              [`users/${item.toUserId}/moneyRequests/${item.id}/status`]:
-                "cancelled",
-              [`users/${item.toUserId}/moneyRequests/${item.id}/decidedAt`]:
-                now,
-            });
-            setNotif({ type: "success", msg: s.success });
-          } catch {
-            setNotif({ type: "error", msg: s.error });
-          }
-          setActionLoading(false);
-        },
-      },
-    ]);
+    setConfirmAction({ type: "cancel", item });
+  };
+
+  const executeConfirmAction = async () => {
+    if (!confirmAction) return;
+    setActionLoading(true);
+
+    if (confirmAction.type === "reject") {
+      const result = await rejectRequest(
+        CURRENT_USER_UID,
+        confirmAction.item.fromUserId,
+        confirmAction.item.id,
+      );
+      setActionLoading(false);
+      setConfirmAction(null);
+      if (result.success) setNotif({ type: "success", msg: s.success });
+      else setNotif({ type: "error", msg: s.error });
+      return;
+    }
+
+    try {
+      const now = Date.now();
+      await update(ref(db), {
+        [`users/${CURRENT_USER_UID}/moneyRequests/${confirmAction.item.id}/status`]:
+          "cancelled",
+        [`users/${CURRENT_USER_UID}/moneyRequests/${confirmAction.item.id}/decidedAt`]:
+          now,
+        [`users/${confirmAction.item.toUserId}/moneyRequests/${confirmAction.item.id}/status`]:
+          "cancelled",
+        [`users/${confirmAction.item.toUserId}/moneyRequests/${confirmAction.item.id}/decidedAt`]:
+          now,
+      });
+      setNotif({ type: "success", msg: s.success });
+    } catch {
+      setNotif({ type: "error", msg: s.error });
+    } finally {
+      setActionLoading(false);
+      setConfirmAction(null);
+    }
   };
 
   const data = activeTab === "received" ? received : sent;
@@ -207,7 +238,7 @@ export default function RequestsScreen() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <View style={styles.root}>
+      <View style={[styles.root, isDark && styles.rootDark]}>
         <StatusBar barStyle="light-content" />
 
         {/* ── Gradient Header ── */}
@@ -282,27 +313,25 @@ export default function RequestsScreen() {
         </LinearGradient>
 
         {/* ── Content ── */}
-        <View style={styles.contentContainer}>
+        <View style={[styles.contentContainer, isDark && styles.contentContainerDark]}>
           {loading ? (
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptySubText}>Loading...</Text>
+              <Text style={[styles.emptySubText, isDark && styles.emptySubTextDark]}>Loading...</Text>
             </View>
           ) : isEmpty ? (
             <View style={styles.emptyContainer}>
-              <View style={styles.emptyIconWrap}>
+              <View style={[styles.emptyIconWrap, isDark && styles.emptyIconWrapDark]}>
                 <Ionicons
                   name={activeTab === "received" ? "notifications-off-outline" : "paper-plane-outline"}
                   size={48}
-                  color="#C4B5FD"
+                  color={isDark ? "#A78BFA" : "#C4B5FD"}
                 />
               </View>
-              <Text style={styles.emptyTitle}>
+              <Text style={[styles.emptyTitle, isDark && styles.emptyTitleDark]}>
                 {activeTab === "received" ? s.emptyReceived : s.emptySent}
               </Text>
-              <Text style={styles.emptySubText}>
-                {activeTab === "received"
-                  ? s.emptySubReceived
-                  : s.emptySubSent}
+              <Text style={[styles.emptySubText, isDark && styles.emptySubTextDark]}>
+                {activeTab === "received" ? s.emptySubReceived : s.emptySubSent}
               </Text>
             </View>
           ) : (
@@ -318,6 +347,7 @@ export default function RequestsScreen() {
                     mode={activeTab}
                     language={language as "en" | "ar"}
                     isRtl={isRtl}
+                    isDark={isDark}
                     onApprove={handleApprove}
                     onReject={handleReject}
                     onCancel={handleCancel}
@@ -329,151 +359,44 @@ export default function RequestsScreen() {
         </View>
 
         {/* ── Approve Bottom Sheet ── */}
-        {approveItem && (
-          <View style={styles.approveSheet}>
-            {/* Handle */}
-            <View style={styles.sheetHandle}>
-              <View style={styles.sheetHandleBar} />
-            </View>
-
-            <Text style={styles.approveTitle}>{s.approveTitle}</Text>
-            <Text style={styles.approveMsg}>
-              {s.approveMsg(
-                approveItem.otherPartyName ?? "",
-                `${CURRENCY_SYMBOLS[approveItem.currancy] ?? ""}${approveItem.amount.toFixed(2)}`,
-              )}
-            </Text>
-
-            <Text style={styles.walletLabel}>{s.selectWallet}</Text>
-            <WalletPicker
-              label={s.selectWallet}
-              placeholder={s.selectWallet}
-              selectedSlot={selectedSlot}
-              wallets={myWallets}
-              loading={walletsLoading}
-              onSelect={setSelectedSlot}
-              isRtl={isRtl}
-            />
-
-            {/* Balance info */}
-            {selectedSlot && approveItem && (() => {
-              const currancy = approveItem.currancy;
-              const balance =
-                selectedSlot.wallet?.currancies?.[currancy] ?? 0;
-              const hasEnough = balance >= approveItem.amount;
-              const symbol =
-                CURRENCY_SYMBOLS[currancy] ?? currancy.toUpperCase();
-
-              return (
-                <>
-                  <View
-                    style={[
-                      styles.balanceBar,
-                      {
-                        backgroundColor: hasEnough ? "#ECFDF5" : "#FEF2F2",
-                        flexDirection: isRtl ? "row-reverse" : "row",
-                      },
-                    ]}
-                  >
-                    <View>
-                      <Text
-                        style={[
-                          styles.balanceLabel,
-                          { color: hasEnough ? "#059669" : "#DC2626" },
-                        ]}
-                      >
-                        {s.balance}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.balanceAmount,
-                          { color: hasEnough ? "#059669" : "#DC2626" },
-                        ]}
-                      >
-                        {symbol}{balance.toFixed(2)}
-                      </Text>
-                    </View>
-                    <View style={{ alignItems: isRtl ? "flex-start" : "flex-end" }}>
-                      <Text
-                        style={[
-                          styles.balanceLabel,
-                          { color: hasEnough ? "#059669" : "#DC2626" },
-                        ]}
-                      >
-                        {s.required}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.balanceAmount,
-                          { color: hasEnough ? "#059669" : "#DC2626" },
-                        ]}
-                      >
-                        {symbol}{approveItem.amount.toFixed(2)}
-                      </Text>
-                    </View>
-                  </View>
-                  {!hasEnough && (
-                    <Text style={styles.insufficientText}>
-                      {s.insufficientBalance}
-                    </Text>
-                  )}
-                </>
-              );
-            })()}
-
-            {/* Action buttons */}
-            <View style={styles.approveActions}>
-              <TouchableOpacity
-                onPress={() => {
-                  setApproveItem(null);
-                  setSelectedSlot(null);
-                }}
-                style={styles.cancelActionBtn}
-              >
-                <Text style={styles.cancelActionText}>{s.cancel}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={confirmApprove}
-                disabled={
-                  actionLoading ||
-                  !selectedSlot ||
-                  (() => {
-                    if (!selectedSlot || !approveItem) return true;
-                    const balance =
-                      selectedSlot.wallet?.currancies?.[approveItem.currancy] ??
-                      0;
-                    return balance < approveItem.amount;
-                  })()
-                }
-                style={[
-                  styles.confirmActionBtn,
-                  {
-                    opacity: (() => {
-                      if (actionLoading || !selectedSlot) return 0.5;
-                      const balance =
-                        selectedSlot.wallet?.currancies?.[
-                          approveItem?.currancy ?? ""
-                        ] ?? 0;
-                      return balance < (approveItem?.amount ?? 0) ? 0.5 : 1;
-                    })(),
-                  },
-                ]}
-              >
-                <LinearGradient
-                  colors={["#7C3AED", "#6D28D9"]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.confirmGradient}
-                >
-                  <Text style={styles.confirmActionText}>
-                    {actionLoading ? "..." : s.confirm}
-                  </Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
+        <ApproveRequestSheet
+          visible={!!approveItem}
+          item={approveItem}
+          selectedSlot={selectedSlot}
+          wallets={myWallets}
+          walletsLoading={walletsLoading}
+          loading={actionLoading}
+          isRtl={isRtl}
+          isDark={isDark}
+          language={language as "en" | "ar"}
+          strings={s}
+          onSelect={setSelectedSlot}
+          onConfirm={confirmApprove}
+          onCancel={() => {
+            setApproveItem(null);
+            setSelectedSlot(null);
+          }}
+        />
       </View>
+
+      <ActionConfirmModal
+        visible={!!confirmAction}
+        title={
+          confirmAction?.type === "reject" ? s.rejectTitle : s.cancelTitle
+        }
+        message={
+          confirmAction?.type === "reject"
+            ? s.rejectMsg(confirmAction.item.otherPartyName ?? "")
+            : s.cancelMsg
+        }
+        confirmLabel={
+          confirmAction?.type === "reject" ? s.rejectConfirm : s.cancelConfirm
+        }
+        loading={actionLoading}
+        onCancel={() => setConfirmAction(null)}
+        onConfirm={executeConfirmAction}
+        language={language as "en" | "ar"}
+      />
 
       <NotificationModal
         visible={!!notif}
@@ -483,6 +406,420 @@ export default function RequestsScreen() {
         language={language as "en" | "ar"}
       />
     </GestureHandlerRootView>
+  );
+}
+
+function ApproveRequestSheet({
+  visible,
+  item,
+  selectedSlot,
+  wallets,
+  walletsLoading,
+  loading,
+  isRtl,
+  isDark,
+  language,
+  strings,
+  onSelect,
+  onConfirm,
+  onCancel,
+}: {
+  visible: boolean;
+  item: MoneyRequestItem | null;
+  selectedSlot: EnrichedWalletSlot | null;
+  wallets: EnrichedWalletSlot[];
+  walletsLoading: boolean;
+  loading: boolean;
+  isRtl: boolean;
+  isDark: boolean;
+  language: "en" | "ar";
+  strings: (typeof STRINGS)["en"];
+  onSelect: (slot: EnrichedWalletSlot) => void;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const bottomSheetRef = useRef<BottomSheet>(null);
+
+  useEffect(() => {
+    if (visible) bottomSheetRef.current?.expand();
+    else bottomSheetRef.current?.close();
+  }, [visible]);
+
+  const renderBackdrop = useCallback(
+    (props: any) => (
+      <BottomSheetBackdrop
+        {...props}
+        disappearsOnIndex={-1}
+        appearsOnIndex={0}
+        onPress={onCancel}
+      />
+    ),
+    [onCancel],
+  );
+
+  if (!visible || !item) return null;
+
+  const symbol = CURRENCY_SYMBOLS[item.currancy] ?? item.currancy.toUpperCase();
+  const balance = selectedSlot?.wallet?.currancies?.[item.currancy] ?? 0;
+  const hasEnough = balance >= item.amount;
+
+  return (
+    <BottomSheet
+      ref={bottomSheetRef}
+      index={0}
+      enableDynamicSizing
+      enablePanDownToClose
+      onClose={onCancel}
+      backdropComponent={renderBackdrop}
+      handleIndicatorStyle={[
+        styles.handleIndicator,
+        isDark && styles.handleIndicatorDark,
+      ]}
+      backgroundStyle={[styles.sheetBg, isDark && styles.sheetBgDark]}
+    >
+      <BottomSheetView style={styles.sheetContainer}>
+        <Text style={[styles.approveTitle, isDark && styles.approveTitleDark]}>
+          {strings.approveTitle}
+        </Text>
+
+        <View style={[styles.amountCard, isDark && styles.amountCardDark]}>
+          <Ionicons name="arrow-up-circle" size={28} color="#7C3AED" />
+          <Text style={styles.amountText}>
+            {symbol}
+            {item.amount.toFixed(2)}
+          </Text>
+          <Text
+            style={[styles.currencyLabel, isDark && styles.currencyLabelDark]}
+          >
+            {item.currancy.toUpperCase()}
+          </Text>
+        </View>
+
+        <View style={styles.detailsContainer}>
+          <SheetRow
+            label={strings.requester}
+            value={item.otherPartyName ?? "—"}
+            sub={item.otherPartyNumber}
+            icon="person-outline"
+            isRtl={isRtl}
+            isDark={isDark}
+          />
+          {selectedSlot && (
+            <SheetRow
+              label={strings.from}
+              value={selectedSlot.slotName}
+              icon="wallet-outline"
+              isRtl={isRtl}
+              isDark={isDark}
+            />
+          )}
+          <SheetRow
+            label={strings.category}
+            value={item.category}
+            icon="grid-outline"
+            isRtl={isRtl}
+            isDark={isDark}
+          />
+          <SheetRow
+            label={strings.note}
+            value={item.note.trim() || strings.noNote}
+            muted={!item.note.trim()}
+            icon="chatbubble-outline"
+            isRtl={isRtl}
+            isDark={isDark}
+          />
+        </View>
+
+        <Text style={[styles.walletLabel, isDark && styles.walletLabelDark]}>
+          {strings.selectWallet}
+        </Text>
+        <WalletPicker
+          label={strings.selectWallet}
+          placeholder={strings.selectWallet}
+          selectedSlot={selectedSlot}
+          wallets={wallets}
+          loading={walletsLoading}
+          onSelect={onSelect}
+          isRtl={isRtl}
+        />
+
+        {selectedSlot && (
+          <>
+            <View
+              style={[
+                styles.balanceBar,
+                {
+                  backgroundColor: hasEnough ? "#ECFDF5" : "#FEF2F2",
+                  flexDirection: isRtl ? "row-reverse" : "row",
+                },
+              ]}
+            >
+              <View>
+                <Text
+                  style={[
+                    styles.balanceLabel,
+                    { color: hasEnough ? "#059669" : "#DC2626" },
+                  ]}
+                >
+                  {strings.balance}
+                </Text>
+                <Text
+                  style={[
+                    styles.balanceAmount,
+                    { color: hasEnough ? "#059669" : "#DC2626" },
+                  ]}
+                >
+                  {symbol}
+                  {balance.toFixed(2)}
+                </Text>
+              </View>
+              <View style={{ alignItems: isRtl ? "flex-start" : "flex-end" }}>
+                <Text
+                  style={[
+                    styles.balanceLabel,
+                    { color: hasEnough ? "#059669" : "#DC2626" },
+                  ]}
+                >
+                  {strings.required}
+                </Text>
+                <Text
+                  style={[
+                    styles.balanceAmount,
+                    { color: hasEnough ? "#059669" : "#DC2626" },
+                  ]}
+                >
+                  {symbol}
+                  {item.amount.toFixed(2)}
+                </Text>
+              </View>
+            </View>
+            {!hasEnough && (
+              <Text style={styles.insufficientText}>
+                {strings.insufficientBalance}
+              </Text>
+            )}
+          </>
+        )}
+
+        <View style={styles.actions}>
+          <TouchableOpacity
+            onPress={onCancel}
+            disabled={loading}
+            style={[styles.cancelBtn, isDark && styles.cancelBtnDark]}
+          >
+            <Text
+              style={[
+                styles.cancelBtnText,
+                isDark && styles.cancelBtnTextDark,
+              ]}
+            >
+              {strings.cancel}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={onConfirm}
+            disabled={loading || !selectedSlot || !hasEnough}
+            style={[
+              styles.confirmBtnOuter,
+              { opacity: loading || !selectedSlot || !hasEnough ? 0.5 : 1 },
+            ]}
+          >
+            <LinearGradient
+              colors={["#7C3AED", "#6D28D9"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.confirmBtnGradient}
+            >
+              {loading ? (
+                <Text style={styles.confirmBtnText}>{strings.processing}</Text>
+              ) : (
+                <>
+                  <Ionicons name="checkmark-circle" size={20} color="white" />
+                  <Text style={styles.confirmBtnText}>{strings.confirm}</Text>
+                </>
+              )}
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+      </BottomSheetView>
+    </BottomSheet>
+  );
+}
+
+function SheetRow({
+  label,
+  value,
+  sub,
+  isRtl,
+  muted,
+  icon,
+  isDark,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  isRtl: boolean;
+  muted?: boolean;
+  icon?: string;
+  isDark: boolean;
+}) {
+  return (
+    <View
+      style={[
+        styles.row,
+        isDark && styles.rowDark,
+        { flexDirection: isRtl ? "row-reverse" : "row" },
+      ]}
+    >
+      <View
+        style={[
+          styles.rowLeft,
+          { flexDirection: isRtl ? "row-reverse" : "row" },
+        ]}
+      >
+        {icon && (
+          <View style={[styles.rowIcon, isDark && styles.rowIconDark]}>
+            <Ionicons name={icon as any} size={16} color="#7C3AED" />
+          </View>
+        )}
+        <Text style={[styles.rowLabel, isDark && styles.rowLabelDark]}>
+          {label}
+        </Text>
+      </View>
+      <View style={{ alignItems: isRtl ? "flex-start" : "flex-end", flex: 1 }}>
+        <Text
+          style={[
+            styles.rowValue,
+            isDark && styles.rowValueDark,
+            muted && styles.rowValueMuted,
+          ]}
+          numberOfLines={1}
+        >
+          {value}
+        </Text>
+        {sub && <Text style={[styles.rowSub, isDark && styles.rowSubDark]}>{sub}</Text>}
+      </View>
+    </View>
+  );
+}
+
+function ActionConfirmModal({
+  visible,
+  title,
+  message,
+  confirmLabel,
+  loading,
+  onCancel,
+  onConfirm,
+  language,
+}: {
+  visible: boolean;
+  title: string;
+  message: string;
+  confirmLabel: string;
+  loading: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+  language: "en" | "ar";
+}) {
+  const scaleAnim = useRef(new Animated.Value(0.85)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
+  const { colorScheme } = useThemeMode();
+  const isDark = colorScheme === "dark";
+
+  useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          useNativeDriver: true,
+          tension: 120,
+          friction: 8,
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 1,
+          duration: 180,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      scaleAnim.setValue(0.85);
+      opacityAnim.setValue(0);
+    }
+  }, [opacityAnim, scaleAnim, visible]);
+
+  return (
+    <Modal
+      transparent
+      visible={visible}
+      animationType="none"
+      statusBarTranslucent
+      onRequestClose={onCancel}
+    >
+      <View style={styles.modalBackdrop}>
+        <Animated.View
+          style={[
+            styles.modalCard,
+            isDark && styles.modalCardDark,
+            { transform: [{ scale: scaleAnim }], opacity: opacityAnim },
+          ]}
+        >
+          <Ionicons
+            name="help-circle"
+            size={72}
+            color="#7C3AED"
+            style={styles.modalIcon}
+          />
+          <Text style={[styles.modalTitle, isDark && styles.modalTitleDark]}>
+            {title}
+          </Text>
+          <Text
+            style={[
+              styles.modalMessage,
+              isDark && styles.modalMessageDark,
+              { textAlign: language === "ar" ? "right" : "center" },
+            ]}
+          >
+            {message}
+          </Text>
+          <View style={styles.modalActions}>
+            <TouchableOpacity
+              onPress={onCancel}
+              disabled={loading}
+              style={[styles.modalCancelBtn, isDark && styles.modalCancelBtnDark]}
+            >
+              <Text
+                style={[
+                  styles.modalCancelText,
+                  isDark && styles.modalCancelTextDark,
+                ]}
+              >
+                {language === "ar" ? "إلغاء" : "Cancel"}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={onConfirm}
+              disabled={loading}
+              style={[
+                styles.modalConfirmOuter,
+                { opacity: loading ? 0.6 : 1 },
+              ]}
+            >
+              <LinearGradient
+                colors={["#7C3AED", "#6D28D9"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.modalConfirmBtn}
+              >
+                <Text style={styles.modalConfirmText}>
+                  {loading ? "..." : confirmLabel}
+                </Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      </View>
+    </Modal>
   );
 }
 
@@ -579,31 +916,11 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 40,
   },
-  approveSheet: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: "white",
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    padding: 24,
-    shadowColor: "#7C3AED",
-    shadowOpacity: 0.2,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: -8 },
-    elevation: 20,
-  },
-  sheetHandle: {
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  sheetHandleBar: {
-    width: 40,
-    height: 4,
-    backgroundColor: "#E5E7EB",
-    borderRadius: 2,
-  },
+  handleIndicator: { backgroundColor: "#DDD6FE", width: 40 },
+  handleIndicatorDark: { backgroundColor: "rgba(255,255,255,0.2)" },
+  sheetBg: { borderTopLeftRadius: 28, borderTopRightRadius: 28 },
+  sheetBgDark: { backgroundColor: "#1C1F2A" },
+  sheetContainer: { paddingHorizontal: 24, paddingTop: 8, paddingBottom: 36 },
   approveTitle: {
     fontSize: 18,
     fontWeight: "bold",
@@ -615,12 +932,61 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     lineHeight: 22,
   },
+  amountCard: {
+    backgroundColor: "#F5F3FF",
+    borderRadius: 20,
+    paddingVertical: 20,
+    alignItems: "center",
+    marginBottom: 20,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: "#EDE9FE",
+  },
+  amountCardDark: {
+    backgroundColor: "rgba(124,58,237,0.15)",
+    borderColor: "rgba(124,58,237,0.3)",
+  },
+  amountText: {
+    color: "#7C3AED",
+    fontSize: 36,
+    fontWeight: "bold",
+    marginTop: 4,
+  },
+  currencyLabel: { color: "#9CA3AF", fontSize: 13 },
+  currencyLabelDark: { color: "rgba(255,255,255,0.4)" },
+  detailsContainer: { gap: 4, marginBottom: 20 },
+  row: {
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+  },
+  rowDark: { borderBottomColor: "rgba(255,255,255,0.07)" },
+  rowLeft: { alignItems: "center", gap: 8 },
+  rowIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: "#F5F3FF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  rowIconDark: { backgroundColor: "rgba(124,58,237,0.2)" },
+  rowLabel: { color: "#9CA3AF", fontSize: 13 },
+  rowLabelDark: { color: "rgba(255,255,255,0.4)" },
+  rowValue: { color: "#1F2937", fontWeight: "600", fontSize: 14 },
+  rowValueDark: { color: "#E0E0E0" },
+  rowValueMuted: { color: "#9CA3AF", fontStyle: "italic" },
+  rowSub: { color: "#9CA3AF", fontSize: 12, marginTop: 1 },
+  rowSubDark: { color: "rgba(255,255,255,0.35)" },
   walletLabel: {
     color: "#7C3AED",
     fontWeight: "600",
     marginBottom: 8,
     fontSize: 13,
   },
+  walletLabelDark: { color: "#A78BFA" },
   balanceBar: {
     marginTop: 12,
     padding: 14,
@@ -643,12 +1009,8 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 6,
   },
-  approveActions: {
-    flexDirection: "row",
-    gap: 12,
-    marginTop: 20,
-  },
-  cancelActionBtn: {
+  actions: { flexDirection: "row", gap: 12, marginTop: 20 },
+  cancelBtn: {
     flex: 1,
     height: 52,
     borderRadius: 16,
@@ -656,24 +1018,92 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  cancelActionText: {
-    color: "#6B7280",
-    fontWeight: "600",
-  },
-  confirmActionBtn: {
+  cancelBtnText: { color: "#6B7280", fontWeight: "600", fontSize: 16 },
+  confirmBtnOuter: {
     flex: 2,
     borderRadius: 16,
     overflow: "hidden",
   },
-  confirmGradient: {
+  confirmBtnGradient: {
     height: 52,
     borderRadius: 16,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: 8,
   },
-  confirmActionText: {
+  confirmBtnText: {
     color: "white",
     fontWeight: "bold",
     fontSize: 16,
   },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 32,
+  },
+  modalCard: {
+    width: "100%",
+    backgroundColor: "white",
+    borderRadius: 28,
+    paddingVertical: 36,
+    paddingHorizontal: 28,
+    alignItems: "center",
+    shadowColor: "#7C3AED",
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 12,
+  },
+  modalCardDark: { backgroundColor: "#1C1F2A" },
+  modalIcon: { marginBottom: 16 },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#1F2937",
+    marginBottom: 10,
+    textAlign: "center",
+  },
+  modalTitleDark: { color: "#E0E0E0" },
+  modalMessage: {
+    fontSize: 16,
+    color: "#1F2937",
+    fontWeight: "600",
+    lineHeight: 24,
+    marginBottom: 28,
+    textAlign: "center",
+  },
+  modalMessageDark: { color: "#E0E0E0" },
+  modalActions: { flexDirection: "row", gap: 12, width: "100%" },
+  modalCancelBtn: {
+    flex: 1,
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalCancelBtnDark: { backgroundColor: "rgba(255,255,255,0.08)" },
+  modalCancelText: { color: "#6B7280", fontWeight: "600", fontSize: 16 },
+  modalCancelTextDark: { color: "rgba(255,255,255,0.6)" },
+  modalConfirmOuter: { flex: 1.4, borderRadius: 16, overflow: "hidden" },
+  modalConfirmBtn: {
+    height: 52,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 16,
+  },
+  modalConfirmText: { color: "white", fontWeight: "bold", fontSize: 16 },
+  // ── Dark variants ──────────────────────────────────────────────────────────
+  rootDark: { backgroundColor: "#0E1118" },
+  contentContainerDark: { backgroundColor: "#0E1118" },
+  emptyIconWrapDark: { backgroundColor: "rgba(139,92,246,0.15)" },
+  emptyTitleDark: { color: "#E0E0E0" },
+  emptySubTextDark: { color: "rgba(255,255,255,0.35)" },
+  approveTitleDark: { color: "#E0E0E0" },
+  approveMsgDark: { color: "rgba(255,255,255,0.5)" },
+  cancelBtnDark: { backgroundColor: "rgba(255,255,255,0.08)" },
+  cancelBtnTextDark: { color: "rgba(255,255,255,0.6)" },
 });

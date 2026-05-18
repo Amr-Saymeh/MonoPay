@@ -162,6 +162,8 @@ export type TranslationKey =
   | "scanQrSubtitle"
   | "myQr"
   | "myQrSubtitle"
+  | "transactionHistory"
+  | "transactionHistorySubtitle"
   | "settingsSubtitle" // ← أضيف هنا لحل مشكلة MenuList / FeaturesPage
   | "changeLanguage" // اقتراح إضافي لزر تغيير اللغة
   | "next"
@@ -570,6 +572,8 @@ export const translations: Record<
     scanQrSubtitle: "Pay instantly by scanning a code",
     myQr: "My QR",
     myQrSubtitle: "Show your code to receive money",
+    transactionHistory: "My Transactions",
+    transactionHistorySubtitle: "View sent & received transfers",
     settingsSubtitle: "Manage your account preferences",
     changeLanguage: "Change Language",
     changePercent: " from last month",
@@ -976,6 +980,8 @@ export const translations: Record<
     scanQrSubtitle: "ادفع مباشرة من خلال مسح الرمز",
     myQr: "QR الخاص بي",
     myQrSubtitle: "اعرض رمزك لاستلام المال",
+    transactionHistory: "معاملاتي",
+    transactionHistorySubtitle: "عرض التحويلات المرسلة والمستلمة",
     settingsSubtitle: "إدارة تفضيلات حسابك",
     changeLanguage: "تغيير اللغة",
     changePercent: " من الشهر الماضي",

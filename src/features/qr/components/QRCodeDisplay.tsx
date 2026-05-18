@@ -22,6 +22,7 @@ interface Props {
   size?: number;
   isRtl?: boolean;
   language?: "en" | "ar";
+  isDark?: boolean;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -31,6 +32,7 @@ export function QRCodeDisplay({
   size = 220,
   isRtl = false,
   language = "en",
+  isDark = false,
 }: Props) {
   const s = STRINGS[language];
 
@@ -45,7 +47,13 @@ export function QRCodeDisplay({
             </Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={[styles.userName, { textAlign: isRtl ? "right" : "left" }]}>
+            <Text
+              style={[
+                styles.userName,
+                isDark && styles.userNameDark,
+                { textAlign: isRtl ? "right" : "left" },
+              ]}
+            >
               {userName}
             </Text>
             <Text style={[styles.userLabel, { textAlign: isRtl ? "right" : "left" }]}>
@@ -58,6 +66,7 @@ export function QRCodeDisplay({
       {/* QR Code */}
       <View style={styles.qrWrapper}>
         <View style={styles.qrInner}>
+          {/* QR code is generated from uid using react-native-qrcode-svg library*/}
           <QRCode
             value={uid}
             size={size}
@@ -110,6 +119,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     color: "#1F2937",
+  },
+  userNameDark: {
+    color: "#F3F4F6",
   },
   userLabel: {
     fontSize: 12,

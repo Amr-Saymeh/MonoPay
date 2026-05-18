@@ -27,6 +27,7 @@ export function useUserWallets(userUid: string | null): UseUserWalletsResult {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // the hook joins wallet slot metadata from the user node with live balances from wallets/.
     if (!userUid) {
       setWallets([]);
       return;
@@ -37,6 +38,9 @@ export function useUserWallets(userUid: string | null): UseUserWalletsResult {
 
     let unsubs: (() => void)[] = [];
 
+    // Slots (the user's wallet list) rarely change, so a one-time get() is enough.
+    // Each wallet's balance can change at any time, so we subscribe with onValue()
+    // per wallet to receive live balance updates without re-fetching the slot list.
     get(ref(db, `users/${userUid}/userwallet`))
       .then((snap) => {
         if (!snap.exists()) {
@@ -59,6 +63,8 @@ export function useUserWallets(userUid: string | null): UseUserWalletsResult {
         const entries = Object.entries(raw);
 
         entries.forEach(([slotKey, slot]) => {
+          // The DB has two possible field names for the wallet ID due to a schema
+          // migration that was not applied retroactively to existing records.
           const walletId = slot.walletid ?? slot.id;
           if (walletId === undefined) return;
 
@@ -71,6 +77,8 @@ export function useUserWallets(userUid: string | null): UseUserWalletsResult {
 
             setWallets((prev) => {
               const others = prev.filter((w) => w.slotKey !== slotKey);
+              // Inactive wallets are excluded so the UI never lets the user
+              // send or receive on a suspended or closed wallet.
               if (!wallet || wallet.state !== "active") return others;
               return [
                 ...others,

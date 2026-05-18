@@ -56,6 +56,7 @@ export function useContactUsers(excludeUid?: string): UseContactUsersResult {
   const [allDBUsers, setAllDBUsers] = useState<AppUser[]>([]);
 
   useEffect(() => {
+    // build two lists: contacts already on MonoPay and contacts that still need an invite.
     const run = async () => {
       try {
         setLoading(true);
@@ -78,10 +79,10 @@ export function useContactUsers(excludeUid?: string): UseContactUsersResult {
           fetchAllDBUsers(),
         ]);
 
-        // احفظ الـ DB users للبحث لاحقاً
+        // save DB users to cache
         setAllDBUsers(dbUsers.filter((u) => u.uid !== excludeUid));
 
-        // 3. اعمل map من رقم الهاتف → DB user
+        // 3. map phone number → DB user
         const phoneToUser = new Map<string, AppUser>();
         dbUsers.forEach((user) => {
           if (user.number) {
@@ -89,7 +90,7 @@ export function useContactUsers(excludeUid?: string): UseContactUsersResult {
           }
         });
 
-        // 4. قارن جهات الاتصال مع الـ DB
+        // 4. compare contacts with DB
         const seen = new Set<string>(); // لتجنب التكرار
         const onApp: ContactUser[] = [];
         const offApp: ContactUser[] = [];
@@ -107,7 +108,7 @@ export function useContactUsers(excludeUid?: string): UseContactUsersResult {
             if (dbUser && dbUser.uid !== excludeUid) {
               onApp.push({ ...dbUser, contactName, isOnApp: true });
             } else if (!dbUser) {
-              // غير مسجل — نضيفه كـ placeholder
+              // not registered — add as placeholder
               offApp.push({
                 uid: `off_${normalized}`,
                 name: contactName,
@@ -134,6 +135,7 @@ export function useContactUsers(excludeUid?: string): UseContactUsersResult {
   }, [excludeUid]);
 
   // ─── بحث برقم هاتف خارج جهات الاتصال ─────────────────────────────────────
+  // searchByPhone supports QR/request/send flows where the user types a number manually.
   const searchByPhone = async (phone: string): Promise<AppUser | null> => {
     const normalized = normalizePhone(phone);
     

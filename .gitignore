@@ -39,7 +39,6 @@ yarn-error.*
 
 app-example
 
-# Claude Code generated files
 /init
 /project-documentation.md
 

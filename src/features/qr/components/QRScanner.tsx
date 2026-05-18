@@ -37,11 +37,12 @@ const FRAME_SIZE = 260;
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export function QRScanner({ onScanned, isRtl = false, language = "en" }: Props) {
+
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const s = STRINGS[language];
 
-  // Permission not yet determined
+  // to show loading state while permission is being determined.
   if (!permission) {
     return (
       <View style={styles.centered}>
@@ -51,7 +52,7 @@ export function QRScanner({ onScanned, isRtl = false, language = "en" }: Props) 
     );
   }
 
-  // Permission denied
+  // if permission denied, show a button to request it.
   if (!permission.granted) {
     return (
       <View style={styles.centered}>
@@ -77,13 +78,17 @@ export function QRScanner({ onScanned, isRtl = false, language = "en" }: Props) 
       </View>
     );
   }
-
+  //  Main: to show the camera view and handle the qr scanning.
   return (
+    
     <View style={styles.scannerContainer}>
+      {/* to run the camera from expo-camera library */}
       <CameraView
         style={StyleSheet.absoluteFillObject}
         facing="back"
+        //barcodeTypes: ["qr"] to scan only qr codes
         barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
+        // onBarcodeScanned: to handle the data from qr and send it to onScanned function 
         onBarcodeScanned={
           scanned
             ? undefined

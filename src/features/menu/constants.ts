@@ -114,6 +114,15 @@ export const menuItems: MenuItem[] = [
     route: "/MainScreen_DailyPur",
   },
   {
+    id: "14",
+    titleKey: "transactionHistory",
+    subtitleKey: "transactionHistorySubtitle",
+    iconName: "time-outline",
+    color: "#F59E0B",
+    state: false,
+    route: "/transaction-history",
+  },
+  {
     id: "7",
     titleKey: "more",
     subtitleKey: undefined,

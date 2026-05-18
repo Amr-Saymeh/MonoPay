@@ -18,6 +18,7 @@ export function useAllUsers(excludeUid?: string): UseAllUsersResult {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // load the app users once and keep the hook focused on read-only selection scenarios.
     const fetchUsers = async () => {
       try {
         setLoading(true);
@@ -47,6 +48,7 @@ export function useAllUsers(excludeUid?: string): UseAllUsersResult {
     void fetchUsers();
   }, [excludeUid]);
 
+  // helper for screens that already have a phone number and need a quick local lookup.
   const findByPhone = (phone: string): AppUser | undefined => {
     const normalized = phone.replace(/\s+/g, "");
     return users.find(
