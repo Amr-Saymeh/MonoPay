@@ -1,14 +1,11 @@
 import { useMemo } from 'react';
 
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-
+import { useLocalSearchParams } from 'expo-router';
+import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useI18n } from '@/hooks/use-i18n';
 import { useAuth } from '@/src/providers/AuthProvider';
-
 import { AmountModal } from './components/AmountModal';
 import { BalanceActions } from './components/BalanceActions';
 import { HistorySection } from './components/HistorySection';
@@ -18,7 +15,6 @@ import { SharedWalletRepositoryProvider } from './context/SharedWalletRepository
 import { useSharedWalletScreen } from './hooks/useSharedWalletScreen';
 
 function SharedScreenContent() {
-  const router = useRouter();
   const { t } = useI18n();
   const { user } = useAuth();
   const params = useLocalSearchParams<{ walletId?: string }>();
@@ -66,11 +62,6 @@ function SharedScreenContent() {
 
   return (
     <ThemedView style={styles.screen}>
-      <Pressable style={styles.backBtn} onPress={() => router.back()}>
-        <MaterialIcons name="arrow-back-ios" size={16} color="#f0eff5" />
-        <ThemedText style={styles.backBtnText}>{t('back')}</ThemedText>
-      </Pressable>
-
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={styles.content}
@@ -140,18 +131,6 @@ const styles = StyleSheet.create({
   screen: { flex: 1, paddingTop: 16, paddingHorizontal: 16 },
   center: { paddingVertical: 32, alignItems: 'center' },
   content: { paddingBottom: 40, gap: 14 },
-  backBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: '#3d3a52',
-    borderRadius: 50,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    gap: 6,
-    marginBottom: 16,
-  },
-  backBtnText: { color: '#f0eff5', fontSize: 13, fontFamily: 'sans-bold' },
   sectionCard: {
     borderRadius: 18,
     padding: 16,
