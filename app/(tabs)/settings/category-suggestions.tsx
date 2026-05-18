@@ -1,231 +1,93 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
-import { useIsFocused } from "@react-navigation/native";
-import { useRouter } from "expo-router";
-import { Alert, Dimensions, Keyboard, Platform, View } from "react-native";
+import { Dimensions, View } from "react-native";
 import Animated, { FadeInDown, useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useI18n } from "@/hooks/use-i18n";
-import { useThemeColor } from "@/hooks/use-theme-color";
 import { CategoryBubble } from "@/src/features/settings/components/category-suggestions/CategoryBubble";
 import { CategorySuggestionsFooter } from "@/src/features/settings/components/category-suggestions/CategorySuggestionsFooter";
 import { CategorySuggestionsHeader } from "@/src/features/settings/components/category-suggestions/CategorySuggestionsHeader";
+import { CategorySuggestionsLoading } from "@/src/features/settings/components/category-suggestions/CategorySuggestionsLoading";
 import { CategorySuggestionsSearchBar } from "@/src/features/settings/components/category-suggestions/CategorySuggestionsSearchBar";
 import { styles } from "@/src/features/settings/components/category-suggestions/styles";
-import { useCategorySuggestions } from "@/src/features/settings/hooks/useCategorySuggestions";
+import { useCategorySuggestionsPalette } from "@/src/features/settings/hooks/useCategorySuggestionsPalette";
+import { useCategorySuggestionsScreen } from "@/src/features/settings/hooks/useCategorySuggestionsScreen";
+import { useKeyboardInset } from "@/src/features/settings/hooks/useKeyboardInset";
 import {
-  buildCategorySuggestionState,
-  getCategoryScrollPosition,
-  getPreparedCustomCategory,
   normalizeCategoryName,
-  syncCategoryValues,
-  syncLocalizedCategoryValues,
-  toggleSelectedCategory,
-} from "@/src/features/settings/utils/categorySuggestions";
+} from "@/src/features/settings/utils/categoryUtils";
 
-const DEFAULT_CLOUD_HEIGHT = Dimensions.get("window").height * 0.6;
+const CLOUD_HEIGHT_RATIO = 0.6;
+const CATEGORY_CENTER_THRESHOLD = 15;
+const FOOTER_MIN_SCROLL_PADDING = 180;
+const FOOTER_SCROLL_PADDING = 140;
+const FOOTER_INSET_PADDING = 16;
+const FOOTER_MIN_PADDING = 24;
+const HEADER_TOP_PADDING = 12;
+
+const DEFAULT_CLOUD_HEIGHT = Dimensions.get("window").height * CLOUD_HEIGHT_RATIO;
 
 export default function CategorySuggestionsScreen() {
   const insets = useSafeAreaInsets();
   const { t, isRtl } = useI18n();
-  const { language } = useI18n();
-  const router = useRouter();
-  const isFocused = useIsFocused();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-
-  const colors = {
-    screenBg: useThemeColor({ light: "#F8F5FC", dark: "#0F0D13" }, "background"),
-    text: useThemeColor({ light: "#1A1A2E", dark: "#F5F5F7" }, "text"),
-    muted: useThemeColor({ light: "#6B7280", dark: "rgba(255,255,255,0.6)" }, "text"),
-    inputBg: useThemeColor({ light: "#FFFFFF", dark: "rgba(255,255,255,0.08)" }, "inputBackground"),
-    accent: useThemeColor({ light: "#6200EE", dark: "#A78BFA" }, "tint"),
-    accentStrong: useThemeColor({ light: "#6200EE", dark: "#8B5CF6" }, "tint"),
-    border: useThemeColor(
-      { light: "rgba(98,0,238,0.15)", dark: "rgba(167,139,250,0.34)" },
-      "border",
-    ),
-    surfaceSoft: useThemeColor(
-      { light: "rgba(232,222,248,0.45)", dark: "rgba(167,139,250,0.16)" },
-      "surface",
-    ),
-    closeBg: useThemeColor({ light: "rgba(0,0,0,0.05)", dark: "rgba(255,255,255,0.12)" }, "surface"),
-    placeholder: useThemeColor({ light: "#9CA3AF", dark: "rgba(255,255,255,0.4)" }, "placeholder"),
-  };
-
-  const idleBubbleBg = isDark ? "rgba(167,139,250,0.2)" : "rgba(232,222,248,0.6)";
-  const idleBubbleText = isDark ? "#E9D5FF" : "#6200EE";
-  const activeBubbleBg = isDark ? "#8B5CF6" : "#6200EE";
-  const ctaShadow = isDark ? "rgba(139,92,246,0.65)" : "#6200EE";
-
   const {
-    initialSelected,
-    initializing,
-    isSettingsMode,
-    localizedDefaults,
-    persistCategories,
-    profileCategories,
-    profileLoaded,
-    signupCategories,
-    signupDetails,
-  } = useCategorySuggestions();
-
-  const [customCategories, setCustomCategories] = useState<string[]>([]);
-  const [selected, setSelected] = useState<string[]>(initialSelected);
-  const [query, setQuery] = useState("");
-  const [adding, setAdding] = useState(false);
-  const [customName, setCustomName] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [showSelectedOnly, setShowSelectedOnly] = useState(false);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
+    activeBubbleBg,
+    colors,
+    ctaShadow,
+    idleBubbleBg,
+    idleBubbleText,
+    isDark,
+  } = useCategorySuggestionsPalette();
   const [cloudHeight, setCloudHeight] = useState(DEFAULT_CLOUD_HEIGHT);
-
+  const keyboardInset = useKeyboardInset();
   const scrollY = useSharedValue(0);
   const scrollViewRef = useRef<Animated.ScrollView>(null);
-  const dirtyRef = useRef(false);
+  const {
+    adding,
+    customName,
+    filteredCategories,
+    handleBack,
+    handleCancelAdd,
+    handleOpenAdd,
+    handlePrimaryPress,
+    handleToggleCategory,
+    primaryDisabled,
+    primaryLabel,
+    query,
+    saving,
+    selectedSet,
+    setCustomName,
+    setQuery,
+    showLoading,
+    toggleSelectedOnly,
+  } = useCategorySuggestionsScreen({ cloudHeight, scrollViewRef });
 
-  const { allCategories, filteredCategories, selectedSet } = useMemo(
-    () =>
-      buildCategorySuggestionState({
-        customCategories,
-        language,
-        localizedDefaults,
-        profileCategories,
-        query,
-        selected,
-        showSelectedOnly,
-        signupCategories,
-      }),
-    [customCategories, language, localizedDefaults, profileCategories, query, selected, showSelectedOnly, signupCategories],
+  const contentBottomPadding = useMemo(
+    () => Math.max(FOOTER_MIN_SCROLL_PADDING, insets.bottom + FOOTER_SCROLL_PADDING),
+    [insets.bottom],
+  );
+  const footerBottomPadding = useMemo(
+    () => Math.max(insets.bottom + FOOTER_INSET_PADDING, FOOTER_MIN_PADDING) + keyboardInset,
+    [insets.bottom, keyboardInset],
   );
 
-  useEffect(() => {
-    if (dirtyRef.current) return;
-
-    setSelected((current) => syncCategoryValues(current, initialSelected));
-  }, [initialSelected]);
-
-  useEffect(() => {
-    setSelected((current) => syncLocalizedCategoryValues(current, language));
-    setCustomCategories((current) => syncLocalizedCategoryValues(current, language));
-  }, [language]);
-
-  useEffect(() => {
-    if (!isFocused) return;
-    if (initializing) return;
-    if (isSettingsMode && !profileLoaded) return;
-    if (!isSettingsMode && !signupDetails) {
-      router.replace("/(auth)/signup-details" as any);
-    }
-  }, [initializing, isFocused, isSettingsMode, profileLoaded, router, signupDetails]);
-
-  useEffect(() => {
-    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
-    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
-
-    const showSub = Keyboard.addListener(showEvent, (event) => {
-      setKeyboardHeight(event.endCoordinates?.height ?? 0);
-    });
-    const hideSub = Keyboard.addListener(hideEvent, () => setKeyboardHeight(0));
-
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, []);
-
-  const handleBack = () => {
-    if ((router as any).canGoBack?.()) {
-      router.back();
-      return;
-    }
-
-    if (isSettingsMode) {
-      router.replace("/(tabs)/settings" as any);
-      return;
-    }
-
-    router.replace("/(auth)/signup-details" as any);
-  };
-
-  const handleToggleCategory = async (name: string) => {
-    dirtyRef.current = true;
-
-    const nextSelected = toggleSelectedCategory(selected, name);
-    setSelected(nextSelected);
-    await persistCategories(nextSelected, { silent: true });
-  };
-
-  const handleAddCustomCategory = async () => {
-    const result = getPreparedCustomCategory({
-      allCategories,
-      customCategories,
-      customName,
-      selected,
-    });
-
-    if (!result) {
-      return;
-    }
-
-    dirtyRef.current = true;
-    setCustomCategories(result.customCategories);
-    setSelected(result.selected);
-    setCustomName("");
-    setAdding(false);
-    Keyboard.dismiss();
-
-    await persistCategories(result.selected, { silent: true });
-
-    setTimeout(() => {
-      const { sortedCategories: nextSorted } = buildCategorySuggestionState({
-        customCategories: result.customCategories,
-        language,
-        localizedDefaults,
-        profileCategories,
-        query: "",
-        selected: result.selected,
-        showSelectedOnly: false,
-        signupCategories,
-      });
-      const targetIndex = nextSorted.findIndex(
-        (category) => normalizeCategoryName(category) === normalizeCategoryName(result.focusCategory),
-      );
-
-      if (targetIndex < 0 || !scrollViewRef.current) return;
-
-      (scrollViewRef.current as any).scrollTo({
-        y: getCategoryScrollPosition(targetIndex, cloudHeight),
-        animated: true,
-      });
-    }, 150);
-  };
-
-  const finish = async () => {
-    setSaving(true);
-    try {
-      await persistCategories(selected);
-
-      if (isSettingsMode) {
-        if ((router as any).canGoBack?.()) {
-          router.back();
-        } else {
-          router.replace("/(tabs)/settings" as any);
-        }
-        return;
-      }
-
-      router.push("/(auth)/id-scan" as any);
-    } catch (error) {
-      Alert.alert(t("error"), error instanceof Error ? error.message : "Failed");
-    } finally {
-      setSaving(false);
-    }
-  };
+  if (showLoading) {
+    return (
+      <ThemedView style={[styles.container, { backgroundColor: colors.screenBg }]}>
+        <CategorySuggestionsLoading
+          accent={colors.accentStrong}
+          borderColor={colors.border}
+          mutedColor={colors.muted}
+          surfaceColor={colors.inputBg}
+          textColor={colors.text}
+          title={t("allCategories")}
+        />
+      </ThemedView>
+    );
+  }
 
   return (
     <ThemedView style={[styles.container, { backgroundColor: colors.screenBg }]}>
@@ -234,11 +96,11 @@ export default function CategorySuggestionsScreen() {
         borderColor={colors.border}
         isRtl={isRtl}
         onBack={handleBack}
-        onOpenAdd={() => setAdding(true)}
+        onOpenAdd={handleOpenAdd}
         surfaceColor={colors.surfaceSoft}
         textColor={colors.text}
         title={t("allCategories")}
-        topPadding={insets.top + 12}
+        topPadding={insets.top + HEADER_TOP_PADDING}
       />
 
       <CategorySuggestionsSearchBar
@@ -253,7 +115,7 @@ export default function CategorySuggestionsScreen() {
         placeholderColor={colors.placeholder}
         query={query}
         textColor={colors.text}
-        toggleSelectedOnly={() => setShowSelectedOnly((current) => !current)}
+        toggleSelectedOnly={toggleSelectedOnly}
       />
 
       <Animated.ScrollView
@@ -268,9 +130,9 @@ export default function CategorySuggestionsScreen() {
         contentContainerStyle={[
           styles.cloudContent,
           {
-            justifyContent: filteredCategories.length < 15 ? "center" : "flex-start",
-            minHeight: filteredCategories.length < 15 ? cloudHeight : undefined,
-            paddingBottom: Math.max(180, insets.bottom + 140),
+            justifyContent: filteredCategories.length < CATEGORY_CENTER_THRESHOLD ? "center" : "flex-start",
+            minHeight: filteredCategories.length < CATEGORY_CENTER_THRESHOLD ? cloudHeight : undefined,
+            paddingBottom: contentBottomPadding,
           },
         ]}
       >
@@ -294,7 +156,7 @@ export default function CategorySuggestionsScreen() {
                 idleLabelColor={idleBubbleText}
                 isRtl={isRtl}
                 name={category}
-                onPress={() => void handleToggleCategory(category)}
+                onPress={() => handleToggleCategory(category)}
                 scrollY={scrollY}
                 selected={selectedSet.has(normalizeCategoryName(category))}
               />
@@ -305,29 +167,19 @@ export default function CategorySuggestionsScreen() {
 
       <CategorySuggestionsFooter
         adding={adding}
-        bottomPadding={Math.max(insets.bottom + 16, 24) + keyboardHeight}
+        bottomPadding={footerBottomPadding}
         closeBg={colors.closeBg}
-        ctaDisabled={adding && !customName.trim()}
-        ctaLabel={adding ? t("add") : isSettingsMode ? t("save") : t("next")}
+        ctaDisabled={primaryDisabled}
+        ctaLabel={primaryLabel}
         ctaShadow={ctaShadow}
         customName={customName}
         inputBg={colors.inputBg}
         isDark={isDark}
         isRtl={isRtl}
         mutedColor={colors.muted}
-        onCancelAdd={() => {
-          setCustomName("");
-          setAdding(false);
-        }}
+        onCancelAdd={handleCancelAdd}
         onChangeCustomName={setCustomName}
-        onPrimaryPress={() => {
-          if (adding) {
-            void handleAddCustomCategory();
-            return;
-          }
-
-          void finish();
-        }}
+        onPrimaryPress={handlePrimaryPress}
         placeholder={t("customCategoryPlaceholder")}
         placeholderColor={colors.placeholder}
         saving={saving}

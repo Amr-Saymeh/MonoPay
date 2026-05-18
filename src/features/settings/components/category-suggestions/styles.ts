@@ -4,6 +4,32 @@ import { Fonts } from "@/constants/theme";
 
 export const styles = StyleSheet.create({
   container: { flex: 1 },
+  loadingWrap: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+  },
+  loadingCard: {
+    width: "100%",
+    maxWidth: 360,
+    borderRadius: 24,
+    borderWidth: 1,
+    paddingHorizontal: 24,
+    paddingVertical: 28,
+    alignItems: "center",
+    gap: 10,
+  },
+  loadingTitle: {
+    fontFamily: Fonts.sansBold,
+    fontSize: 18,
+    textAlign: "center",
+  },
+  loadingSubtitle: {
+    fontFamily: Fonts.sansMedium,
+    fontSize: 14,
+    textAlign: "center",
+  },
   header: { paddingHorizontal: 20, paddingBottom: 12 },
   headerRow: {
     flexDirection: "row",
@@ -145,3 +171,5 @@ export const styles = StyleSheet.create({
     elevation: 8,
   },
 });
+
+

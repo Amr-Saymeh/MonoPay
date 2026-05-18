@@ -1,10 +1,6 @@
-import React from "react";
-
-import { Stack } from "expo-router";
-
-import { ThemeToggleHeaderButton } from "@/components/theme-toggle";
 import { Fonts } from "@/constants/theme";
 import { useThemeColor } from "@/hooks/use-theme-color";
+import { Stack } from "expo-router";
 import { useI18n } from "../../../hooks/use-i18n";
 
 export default function SettingsLayout() {
@@ -20,7 +16,6 @@ export default function SettingsLayout() {
           backgroundColor: headerBg,
         },
         headerTintColor: headerTint,
-        headerRight: () => <ThemeToggleHeaderButton />,
         headerTitleStyle: {
           fontFamily: Fonts.sansBold,
         },

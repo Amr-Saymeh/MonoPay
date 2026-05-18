@@ -18,9 +18,9 @@ import { AuthScreenShell } from "@/src/features/auth/components/AuthScreenShell"
 import { useAuthFormScreen } from "@/src/features/auth/hooks/useAuthFormScreen";
 import { authFormStyles } from "@/src/features/auth/styles/formScreens";
 import {
+  cleanEmailInput,
   getSignupValidationError,
   isValidEmail,
-  sanitizeEmailInput,
   type SignupValues,
 } from "@/src/features/auth/utils/signupValidation";
 
@@ -185,7 +185,7 @@ export default function SignupDetailsScreen() {
             <AuthInput
               ref={emailRef}
               value={value}
-              onChangeText={(text) => onChange(sanitizeEmailInput(text))}
+              onChangeText={(text) => onChange(cleanEmailInput(text))}
               errorMessage={error?.message}
               placeholder={t("email")}
               keyboardType="email-address"

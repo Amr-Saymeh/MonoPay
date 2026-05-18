@@ -18,7 +18,7 @@ import { AuthFooterLink } from "@/src/features/auth/components/AuthFooterLink";
 import { AuthScreenHeader } from "@/src/features/auth/components/AuthScreenHeader";
 import { AuthScreenShell } from "@/src/features/auth/components/AuthScreenShell";
 import { authFormStyles } from "@/src/features/auth/styles/formScreens";
-import { isValidEmail, sanitizeEmailInput } from "@/src/features/auth/utils/signupValidation";
+import { cleanEmailInput, isValidEmail } from "@/src/features/auth/utils/signupValidation";
 
 type LoginFormValues = {
   email: string;
@@ -44,6 +44,7 @@ export default function LoginScreen() {
       pin: "",
     },
     mode: "onChange",
+    delayError: 350,
   });
 
   const canSubmit = formState.isValid && !signingIn;
@@ -85,7 +86,7 @@ export default function LoginScreen() {
               <AuthInput
                 ref={emailRef}
                 value={value}
-                onChangeText={(text) => onChange(sanitizeEmailInput(text))}
+                onChangeText={(text) => onChange(cleanEmailInput(text))}
                 errorMessage={error?.message}
                 placeholder={t("email")}
                 keyboardType="email-address"

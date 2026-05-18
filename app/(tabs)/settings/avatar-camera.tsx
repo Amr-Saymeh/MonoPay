@@ -1,6 +1,6 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 
-import { CameraView, useCameraPermissions } from "expo-camera";
+import { CameraView } from "expo-camera";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import {
@@ -16,6 +16,7 @@ import { ThemedView } from "@/components/themed-view";
 import { GradientButton } from "@/components/ui/gradient-button";
 import { useI18n } from "@/hooks/use-i18n";
 import { useThemeColor } from "@/hooks/use-theme-color";
+import { useCameraCapture } from "@/src/features/auth/hooks/useCameraCapture";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { uploadImageToCloudinary } from "@/src/services/cloudinary.service";
 import { updateUserProfile } from "@/src/services/user.service";
@@ -28,28 +29,13 @@ export default function AvatarCameraScreen() {
   const surface = useThemeColor({}, "surface");
   const border = useThemeColor({}, "border");
 
-  const cameraRef = useRef<CameraView | null>(null);
-  const [permission, requestPermission] = useCameraPermissions();
-  const [capturing, setCapturing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [photoUri, setPhotoUri] = useState<string | null>(null);
-
-  const onCapture = async () => {
-    if (!cameraRef.current) return;
-
-    setCapturing(true);
-    try {
-      const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.85,
-        base64: false,
-      });
-      setPhotoUri(photo.uri);
-    } catch {
-      Alert.alert(t("error"), t("captureFailed"));
-    } finally {
-      setCapturing(false);
-    }
-  };
+  const { cameraRef, capturePhoto, capturing, permission, photoUri, requestPermission, setPhotoUri } =
+    useCameraCapture({
+      errorMessage: t("captureFailed"),
+      errorTitle: t("error"),
+      initialPhotoUri: null,
+    });
 
   const onUse = async () => {
     if (!user || !photoUri) return;
@@ -113,6 +99,7 @@ export default function AvatarCameraScreen() {
               cameraRef.current = value;
             }}
             style={styles.camera}
+            active
             facing="front"
           />
         )}
@@ -139,7 +126,7 @@ export default function AvatarCameraScreen() {
         ) : (
           <GradientButton
             label={t("capture")}
-            onPress={() => void onCapture()}
+            onPress={() => void capturePhoto()}
             iconName="photo-camera"
             loading={capturing}
             style={styles.captureButton}
