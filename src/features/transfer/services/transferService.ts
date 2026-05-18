@@ -14,7 +14,8 @@ import {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-// يجيب الـ main wallet (wallet1) لأي مستخدم
+// Every user's primary wallet is always stored under the "wallet1" slot key.
+// Incoming funds always land here — the sender never chooses the destination wallet.
 async function getMainWalletId(userUid: string): Promise<number | null> {
   const snap = await get(ref(db, `users/${userUid}/userwallet/wallet1`));
   if (!snap.exists()) return null;
@@ -22,7 +23,8 @@ async function getMainWalletId(userUid: string): Promise<number | null> {
   return data.walletid ?? data.id ?? null;
 }
 
-// يجيب walletId لأي slotKey
+// Reads the wallet ID for a given slot key.
+// "walletid" is the preferred field; "id" is the legacy fallback for older records.
 async function getWalletIdBySlot(
   userUid: string,
   slotKey: string,
@@ -38,7 +40,8 @@ async function getWallet(walletKey: string): Promise<Wallet | null> {
   return snap.exists() ? (snap.val() as Wallet) : null;
 }
 
-// يكتب transaction history للطرفين
+// Writes one transaction record to both the sender's and receiver's history nodes
+// in a single update() call, so both see the transaction immediately.
 async function writeTransactionHistory(
   senderUid: string,
   receiverUid: string,
@@ -71,8 +74,8 @@ async function writeTransactionHistory(
 }
 
 // ─── Send Money ──────────────────────────────────────────────────────────────
-// المرسل يختار المستلم والمبلغ والعملة
-// النظام يوصّل لـ main wallet للمستلم تلقائياً
+// Debits the sender's chosen wallet and credits the receiver's main wallet.
+// Uses runTransaction to guarantee atomicity — either both balances update or neither does.
 
 export async function sendMoney(
   params: SendMoneyParams,
@@ -103,7 +106,7 @@ export async function sendMoney(
     const senderWalletKey = `wallet${senderWalletId}`;
     const receiverWalletKey = `wallet${receiverWalletId}`;
 
-    // تحقق من حالة المحافظ
+    
     const [senderWallet, receiverWallet] = await Promise.all([
       getWallet(senderWalletKey),
       getWallet(receiverWalletKey),
@@ -133,14 +136,14 @@ export async function sendMoney(
         const senderBalance = sender.currancies?.[currency] ?? 0;
         if (senderBalance < amount) {
           transactionError = "INSUFFICIENT_FUNDS";
+          // Returning undefined aborts the Firebase transaction — no balances change.
           return;
         }
 
-        // طرح من المرسل
         if (!sender.currancies) sender.currancies = {};
         sender.currancies[currency] = senderBalance - amount;
 
-        // إضافة للمستلم (إنشاء العملة إذا ما كانت موجودة)
+        // Create the currency key on the receiver's wallet if it doesn't exist yet.
         if (!receiver.currancies) receiver.currancies = {};
         receiver.currancies[currency] =
           (receiver.currancies[currency] ?? 0) + amount;
@@ -151,7 +154,7 @@ export async function sendMoney(
 
     if (transactionError) return fail(transactionError);
 
-    // كتابة التاريخ للطرفين
+    
     await writeTransactionHistory(
       senderUid,
       receiverUid,
@@ -174,7 +177,8 @@ export async function sendMoney(
 }
 
 // ─── Request Money ───────────────────────────────────────────────────────────
-// الطالب ينشئ طلب فقط — لا يتغير أي رصيد الآن
+// Creates a payment request without moving any funds.
+// The request is written to both users' nodes so each can see it in their list.
 
 export async function requestMoney(
   params: RequestMoneyParams,
@@ -196,11 +200,11 @@ export async function requestMoney(
       createdAt: Date.now(),
     };
 
-    // نفس الـ ID عند الطرفين عشان نقدر نربطهم لاحقاً
+    
     const requestId = push(ref(db, `users/${payerUid}/moneyRequests`)).key!;
 
     await update(ref(db), {
-      // عند الدافع — عشان يشوف مين طالب منه ويوافق أو يرفض
+      
       [`users/${payerUid}/moneyRequests/${requestId}`]: moneyRequest,
       // عند الطالب — عشان يشوف طلباته وحالتها ويقدر يلغي
       [`users/${requesterUid}/moneyRequests/${requestId}`]: moneyRequest,
@@ -214,7 +218,8 @@ export async function requestMoney(
 }
 
 // ─── Approve Request ─────────────────────────────────────────────────────────
-// الدافع يوافق ويختار من أي محفظة يدفع (الافتراضي wallet1)
+// Executes the actual money movement when a payer approves a request.
+// Uses the same atomic runTransaction pattern as sendMoney.
 
 export async function approveRequest(
   params: ApproveRequestParams,
@@ -231,7 +236,7 @@ export async function approveRequest(
   } = params;
 
   try {
-    // جيب محفظة الدافع (اللي اختارها) ومحفظة الطالب (main wallet)
+    
     const [payerWalletId, requesterWalletId] = await Promise.all([
       getWalletIdBySlot(payerUid, payerWalletSlotKey),
       getMainWalletId(requesterUid),
@@ -270,11 +275,9 @@ export async function approveRequest(
           return;
         }
 
-        // طرح من الدافع
         if (!payer.currancies) payer.currancies = {};
         payer.currancies[currency] = payerBalance - amount;
 
-        // إضافة للطالب (main wallet)
         if (!requester.currancies) requester.currancies = {};
         requester.currancies[currency] =
           (requester.currancies[currency] ?? 0) + amount;
@@ -287,8 +290,6 @@ export async function approveRequest(
 
     const now = Date.now();
 
-    // كتابة التاريخ للطرفين + تحديث status الطلب
-    // ✅ استبدله بهذا
     await writeTransactionHistory(
       payerUid,
       requesterUid,

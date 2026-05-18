@@ -1,3 +1,5 @@
-// app/(tabs)/transfer.tsx
-// هذا الملف بس بيعمل import للشاشة — لا منطق هنا
-export { default } from "@/src/features/transfer/screens/MakeTransactionScreen";
+import { Redirect } from "expo-router";
+
+export default function TransferRoute() {
+  return <Redirect href={"/send-money" as any} />;
+}

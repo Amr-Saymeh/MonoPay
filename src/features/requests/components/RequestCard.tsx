@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import React, { useRef } from "react";
+import { useRef } from "react";
 import {
   Animated,
   StyleSheet,
@@ -65,6 +65,7 @@ interface Props {
   mode: "received" | "sent";
   language: "en" | "ar";
   isRtl: boolean;
+  isDark?: boolean;
   onApprove?: (item: MoneyRequestItem) => void;
   onReject?: (item: MoneyRequestItem) => void;
   onCancel?: (item: MoneyRequestItem) => void;
@@ -75,11 +76,13 @@ export function RequestCard({
   mode,
   language,
   isRtl,
+  isDark = false,
   onApprove,
   onReject,
   onCancel,
 }: Props) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  // Status config drives the accent color, badge color, and icon in one lookup.
   const status = STATUS_CONFIG[item.status];
   const symbol = CURRENCY_SYMBOLS[item.currancy] ?? item.currancy.toUpperCase();
   const categoryIcon = CATEGORY_ICONS[item.category] ?? "cash-outline";
@@ -101,7 +104,7 @@ export function RequestCard({
 
   return (
     <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-      <View style={styles.card}>
+      <View style={[styles.card, isDark && styles.cardDark]}>
         {/* ── Status accent ── */}
         <View style={[styles.accent, { backgroundColor: status.color }]} />
 
@@ -123,6 +126,7 @@ export function RequestCard({
               <Text
                 style={[
                   styles.nameText,
+                  isDark && styles.nameTextDark,
                   { textAlign: isRtl ? "right" : "left" },
                 ]}
               >
@@ -132,6 +136,7 @@ export function RequestCard({
                 <Text
                   style={[
                     styles.numberText,
+                    isDark && styles.numberTextDark,
                     { textAlign: isRtl ? "right" : "left" },
                   ]}
                 >
@@ -168,12 +173,8 @@ export function RequestCard({
               {item.currancy.toUpperCase()}
             </Text>
             <View style={{ flex: 1 }} />
-            <View style={styles.categoryIcon}>
-              <Ionicons
-                name={categoryIcon as any}
-                size={18}
-                color="#7C3AED"
-              />
+            <View style={[styles.categoryIcon, isDark && styles.categoryIconDark]}>
+              <Ionicons name={categoryIcon as any} size={18} color="#A78BFA" />
             </View>
           </View>
 
@@ -182,6 +183,7 @@ export function RequestCard({
             <Text
               style={[
                 styles.noteText,
+                isDark && styles.noteTextDark,
                 { textAlign: isRtl ? "right" : "left" },
               ]}
             >
@@ -196,8 +198,8 @@ export function RequestCard({
               { flexDirection: isRtl ? "row-reverse" : "row" },
             ]}
           >
-            <Ionicons name="time-outline" size={12} color="#9CA3AF" />
-            <Text style={styles.dateText}>{date}</Text>
+            <Ionicons name="time-outline" size={12} color={isDark ? "rgba(255,255,255,0.3)" : "#9CA3AF"} />
+            <Text style={[styles.dateText, isDark && styles.dateTextDark]}>{date}</Text>
           </View>
 
           {/* ── Action Buttons ── */}
@@ -241,11 +243,11 @@ export function RequestCard({
           {item.status === "pending" && mode === "sent" && (
             <TouchableOpacity
               onPress={() => onCancel?.(item)}
-              style={styles.cancelBtn}
+              style={[styles.cancelBtn, isDark && styles.cancelBtnDark]}
               activeOpacity={0.7}
             >
-              <Ionicons name="close-circle-outline" size={16} color="#6B7280" />
-              <Text style={styles.cancelBtnText}>
+              <Ionicons name="close-circle-outline" size={16} color={isDark ? "rgba(255,255,255,0.4)" : "#6B7280"} />
+              <Text style={[styles.cancelBtnText, isDark && styles.cancelBtnTextDark]}>
                 {language === "ar" ? "إلغاء الطلب" : "Cancel Request"}
               </Text>
             </TouchableOpacity>
@@ -406,4 +408,13 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontSize: 14,
   },
+  // ── Dark variants ──────────────────────────────────────────────────────────
+  cardDark: { backgroundColor: "#1C1F2A" },
+  nameTextDark: { color: "#E0E0E0" },
+  numberTextDark: { color: "rgba(255,255,255,0.35)" },
+  noteTextDark: { color: "rgba(255,255,255,0.5)" },
+  dateTextDark: { color: "rgba(255,255,255,0.35)" },
+  categoryIconDark: { backgroundColor: "rgba(139,92,246,0.15)" },
+  cancelBtnDark: { backgroundColor: "rgba(255,255,255,0.07)" },
+  cancelBtnTextDark: { color: "rgba(255,255,255,0.5)" },
 });

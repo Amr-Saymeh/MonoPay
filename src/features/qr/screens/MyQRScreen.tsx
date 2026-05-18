@@ -1,7 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import React from "react";
 import {
   Platform,
   ScrollView,
@@ -14,6 +13,7 @@ import {
 
 import { useI18n } from "@/hooks/use-i18n";
 import { useAuth } from "@/src/providers/AuthProvider";
+import { useThemeMode } from "@/src/providers/ThemeModeProvider";
 import { QRCodeDisplay } from "../components/QRCodeDisplay";
 
 // ─── Strings ─────────────────────────────────────────────────────────────────
@@ -35,13 +35,16 @@ export default function MyQRScreen() {
   const router = useRouter();
   const { user, profile } = useAuth();
   const { language, isRtl } = useI18n();
+  const { colorScheme } = useThemeMode();
+  const isDark = colorScheme === "dark";
   const s = STRINGS[language as "en" | "ar"] ?? STRINGS.en;
 
   const uid = user?.uid ?? "";
   const userName = profile?.name ?? "";
+  // QR code is generated locally from the uid — no network call required.
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, isDark && styles.rootDark]}>
       <StatusBar barStyle="light-content" />
 
       {/* ── Gradient Header ── */}
@@ -85,7 +88,7 @@ export default function MyQRScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* QR Card */}
-        <View style={styles.qrCard}>
+        <View style={[styles.qrCard, isDark && styles.qrCardDark]}>
           <QRCodeDisplay
             uid={uid}
             userName={userName}
@@ -96,7 +99,7 @@ export default function MyQRScreen() {
         </View>
 
         {/* Hint */}
-        <Text style={styles.shareHint}>{s.shareHint}</Text>
+        <Text style={[styles.shareHint, isDark && styles.shareHintDark]}>{s.shareHint}</Text>
 
         {/* ── Scan Button ── */}
         <TouchableOpacity
@@ -202,4 +205,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     letterSpacing: 0.3,
   },
+  rootDark: { backgroundColor: "#0E1118" },
+  qrCardDark: { backgroundColor: "#1C1F2A", borderColor: "rgba(255,255,255,0.07)" },
+  shareHintDark: { color: "rgba(255,255,255,0.35)" },
 });

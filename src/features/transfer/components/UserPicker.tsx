@@ -1,16 +1,17 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Modal,
   Pressable,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 
+import { useThemeMode } from "@/src/providers/ThemeModeProvider";
 import { ContactUser, useContactUsers } from "../hooks/useContactUsers";
 import { AppUser } from "../types";
 
@@ -73,10 +74,12 @@ function Avatar({
   name,
   isOnApp,
   size = 40,
+  isDark,
 }: {
   name: string;
   isOnApp: boolean;
   size?: number;
+  isDark: boolean;
 }) {
   return (
     <View
@@ -84,14 +87,16 @@ function Avatar({
         width: size,
         height: size,
         borderRadius: size / 2,
-        backgroundColor: isOnApp ? "#EDE9FE" : "#F3F4F6",
+        backgroundColor: isOnApp
+          ? isDark ? "rgba(124,58,237,0.25)" : "#EDE9FE"
+          : isDark ? "rgba(255,255,255,0.08)" : "#F3F4F6",
         alignItems: "center",
         justifyContent: "center",
       }}
     >
       <Text
         style={{
-          color: isOnApp ? "#7C3AED" : "#9CA3AF",
+          color: isOnApp ? "#7C3AED" : isDark ? "rgba(255,255,255,0.4)" : "#9CA3AF",
           fontWeight: "bold",
           fontSize: size * 0.35,
         }}
@@ -108,17 +113,23 @@ function UserRow({
   isSelected,
   onPress,
   isRtl,
+  isDark,
 }: {
   user: ContactUser | AppUser;
   isSelected: boolean;
   onPress: () => void;
   isRtl: boolean;
+  isDark: boolean;
 }) {
   const isContact = "isOnApp" in user;
   const isOnApp = isContact ? (user as ContactUser).isOnApp : true;
-  const displayName = isContact
-    ? (user as ContactUser).contactName
-    : user.name;
+  const displayName = isContact ? (user as ContactUser).contactName : user.name;
+
+  const rowBg = isSelected
+    ? isDark ? "rgba(124,58,237,0.25)" : "#EDE9FE"
+    : isOnApp
+    ? isDark ? "#252D3D" : "white"
+    : isDark ? "rgba(255,255,255,0.04)" : "#F9FAFB";
 
   return (
     <TouchableOpacity
@@ -131,30 +142,20 @@ function UserRow({
         padding: 12,
         borderRadius: 16,
         marginBottom: 4,
-        backgroundColor: isSelected
-          ? "#EDE9FE"
-          : isOnApp
-          ? "white"
-          : "#F9FAFB",
+        backgroundColor: rowBg,
         borderWidth: isSelected ? 1 : 0,
-        borderColor: "#DDD6FE",
+        borderColor: isDark ? "#7C3AED" : "#DDD6FE",
         opacity: isOnApp ? 1 : 0.5,
       }}
     >
-      <Avatar name={displayName} isOnApp={isOnApp} />
+      <Avatar name={displayName} isOnApp={isOnApp} isDark={isDark} />
 
-      <View
-        style={{
-          flex: 1,
-          marginLeft: isRtl ? 0 : 12,
-          marginRight: isRtl ? 12 : 0,
-        }}
-      >
+      <View style={{ flex: 1, marginLeft: isRtl ? 0 : 12, marginRight: isRtl ? 12 : 0 }}>
         <Text
           style={{
             fontWeight: "600",
             fontSize: 15,
-            color: "#1F2937",
+            color: isDark ? "#E0E0E0" : "#1F2937",
             textAlign: isRtl ? "right" : "left",
           }}
         >
@@ -163,7 +164,7 @@ function UserRow({
         {user.number ? (
           <Text
             style={{
-              color: "#9CA3AF",
+              color: isDark ? "rgba(255,255,255,0.4)" : "#9CA3AF",
               fontSize: 12,
               textAlign: isRtl ? "right" : "left",
             }}
@@ -173,23 +174,16 @@ function UserRow({
         ) : null}
       </View>
 
-      {/* Badge */}
       {isOnApp && (
         <View
           style={{
-            backgroundColor: isSelected ? "#7C3AED" : "#F3F0FF",
+            backgroundColor: isSelected ? "#7C3AED" : isDark ? "rgba(124,58,237,0.2)" : "#F3F0FF",
             borderRadius: 8,
             paddingHorizontal: 8,
             paddingVertical: 3,
           }}
         >
-          <Text
-            style={{
-              fontSize: 11,
-              fontWeight: "600",
-              color: isSelected ? "white" : "#7C3AED",
-            }}
-          >
+          <Text style={{ fontSize: 11, fontWeight: "600", color: isSelected ? "white" : "#7C3AED" }}>
             ✓
           </Text>
         </View>
@@ -214,6 +208,8 @@ export function UserPicker({
   const [phoneSearchResult, setPhoneSearchResult] = useState<
     AppUser | "not_found" | "searching" | null
   >(null);
+  const { colorScheme } = useThemeMode();
+  const isDark = colorScheme === "dark";
 
   const {
     onAppContacts,
@@ -223,15 +219,11 @@ export function UserPicker({
     searchByPhone,
   } = useContactUsers(currentUserUid);
 
-  // ─── Search logic ──────────────────────────────────────────────────────────
   const handleSearchChange = async (text: string) => {
     setSearch(text);
     setPhoneSearchResult(null);
-
     if (!text.trim()) return;
-
     if (isPhoneNumber(text) && text.replace(/\D/g, "").length >= 7) {
-      // بحث برقم هاتف
       setPhoneSearchResult("searching");
       const result = await searchByPhone(text);
       if (result && result.uid !== currentUserUid) {
@@ -242,7 +234,6 @@ export function UserPicker({
     }
   };
 
-  // ─── Filtered contacts ─────────────────────────────────────────────────────
   const filteredOnApp = search.trim() && !isPhoneNumber(search)
     ? onAppContacts.filter(
         (u) =>
@@ -251,7 +242,6 @@ export function UserPicker({
       )
     : onAppContacts;
 
-  // ─── Select ────────────────────────────────────────────────────────────────
   const handleSelect = (user: AppUser) => {
     onSelect(user);
     setSearch("");
@@ -259,7 +249,6 @@ export function UserPicker({
     setVisible(false);
   };
 
-  // ─── Render content ────────────────────────────────────────────────────────
   const renderContent = () => {
     if (loading) {
       return (
@@ -269,136 +258,86 @@ export function UserPicker({
       );
     }
 
-    // حالة البحث برقم هاتف
     if (isPhoneNumber(search) && search.replace(/\D/g, "").length >= 7) {
       if (phoneSearchResult === "searching") {
         return (
           <View style={{ paddingVertical: 40, alignItems: "center", gap: 8 }}>
             <ActivityIndicator color="#7C3AED" />
-            <Text style={{ color: "#9CA3AF" }}>{s.searching}</Text>
+            <Text style={{ color: isDark ? "rgba(255,255,255,0.4)" : "#9CA3AF" }}>{s.searching}</Text>
           </View>
         );
       }
-
       if (phoneSearchResult === "not_found") {
         return (
           <View style={{ paddingVertical: 40, alignItems: "center", gap: 12 }}>
             <Text style={{ fontSize: 40 }}>😕</Text>
-            <Text
-              style={{
-                color: "#6B7280",
-                textAlign: "center",
-                fontWeight: "600",
-              }}
-            >
+            <Text style={{ color: isDark ? "rgba(255,255,255,0.5)" : "#6B7280", textAlign: "center", fontWeight: "600" }}>
               {s.notRegistered}
             </Text>
-            <Text style={{ color: "#9CA3AF", fontSize: 13, textAlign: "center" }}>
+            <Text style={{ color: isDark ? "rgba(255,255,255,0.3)" : "#9CA3AF", fontSize: 13, textAlign: "center" }}>
               {search}
             </Text>
           </View>
         );
       }
-
       if (phoneSearchResult && typeof phoneSearchResult === "object") {
         return (
           <View style={{ paddingTop: 8 }}>
-            <SectionHeader text={s.onApp} />
+            <SectionHeader text={s.onApp} isDark={isDark} />
             <UserRow
-              user={{
-                ...phoneSearchResult,
-                contactName: phoneSearchResult.name,
-                isOnApp: true,
-              }}
+              user={{ ...phoneSearchResult, contactName: phoneSearchResult.name, isOnApp: true }}
               isSelected={selectedUser?.uid === phoneSearchResult.uid}
               onPress={() => handleSelect(phoneSearchResult as AppUser)}
               isRtl={isRtl}
+              isDark={isDark}
             />
           </View>
         );
       }
     }
 
-    // حالة إذن مرفوض
     if (permissionDenied) {
       return (
         <View>
-          <View
-            style={{
-              backgroundColor: "#FEF3C7",
-              borderRadius: 12,
-              padding: 12,
-              marginBottom: 12,
-              flexDirection: "row",
-              gap: 8,
-              alignItems: "center",
-            }}
-          >
+          <View style={{ backgroundColor: "#FEF3C7", borderRadius: 12, padding: 12, marginBottom: 12, flexDirection: "row", gap: 8, alignItems: "center" }}>
             <Text>⚠️</Text>
-            <Text style={{ color: "#92400E", fontSize: 12, flex: 1 }}>
-              {s.permissionDenied}
-            </Text>
+            <Text style={{ color: "#92400E", fontSize: 12, flex: 1 }}>{s.permissionDenied}</Text>
           </View>
           <FlatList
             data={onAppContacts}
             keyExtractor={(item) => item.uid}
             style={{ maxHeight: 300 }}
             renderItem={({ item }) => (
-              <UserRow
-                user={item}
-                isSelected={selectedUser?.uid === item.uid}
-                onPress={() => handleSelect(item)}
-                isRtl={isRtl}
-              />
+              <UserRow user={item} isSelected={selectedUser?.uid === item.uid} onPress={() => handleSelect(item)} isRtl={isRtl} isDark={isDark} />
             )}
           />
         </View>
       );
     }
 
-    // قائمة جهات الاتصال الطبيعية
     return (
       <View>
-        {/* على التطبيق */}
         {filteredOnApp.length > 0 && (
           <View>
-            <SectionHeader text={s.onApp} />
+            <SectionHeader text={s.onApp} isDark={isDark} />
             {filteredOnApp.map((user) => (
-              <UserRow
-                key={user.uid}
-                user={user}
-                isSelected={selectedUser?.uid === user.uid}
-                onPress={() => handleSelect(user)}
-                isRtl={isRtl}
-              />
+              <UserRow key={user.uid} user={user} isSelected={selectedUser?.uid === user.uid} onPress={() => handleSelect(user)} isRtl={isRtl} isDark={isDark} />
             ))}
           </View>
         )}
-
-        {/* غير مسجلين */}
         {!search && offAppContacts.length > 0 && (
           <View style={{ marginTop: 8 }}>
-            <SectionHeader text={s.notOnApp} />
+            <SectionHeader text={s.notOnApp} isDark={isDark} />
             {offAppContacts.slice(0, 5).map((user) => (
-              <UserRow
-                key={user.uid}
-                user={user}
-                isSelected={false}
-                onPress={() => {}}
-                isRtl={isRtl}
-              />
+              <UserRow key={user.uid} user={user} isSelected={false} onPress={() => {}} isRtl={isRtl} isDark={isDark} />
             ))}
           </View>
         )}
-
-        {/* مش لاقي نتائج */}
         {filteredOnApp.length === 0 && !isPhoneNumber(search) && search.trim() && (
           <View style={{ paddingVertical: 40, alignItems: "center", gap: 8 }}>
             <Text style={{ fontSize: 40 }}>🔍</Text>
-            <Text style={{ color: "#9CA3AF" }}>{s.noResults}</Text>
-            <Text style={{ color: "#C4B5FD", fontSize: 12 }}>
-              {s.phoneHint}
-            </Text>
+            <Text style={{ color: isDark ? "rgba(255,255,255,0.4)" : "#9CA3AF" }}>{s.noResults}</Text>
+            <Text style={{ color: "#C4B5FD", fontSize: 12 }}>{s.phoneHint}</Text>
           </View>
         )}
       </View>
@@ -411,134 +350,69 @@ export function UserPicker({
       <TouchableOpacity
         onPress={() => setVisible(true)}
         activeOpacity={0.7}
-        style={{
-          backgroundColor: "white",
-          borderRadius: 16,
-          flexDirection: isRtl ? "row-reverse" : "row",
-          alignItems: "center",
-          paddingHorizontal: 16,
-          height: 64,
-          shadowColor: "#000",
-          shadowOpacity: 0.06,
-          shadowRadius: 8,
-          elevation: 2,
-        }}
+        style={[styles.trigger, isDark && styles.triggerDark, { flexDirection: isRtl ? "row-reverse" : "row" }]}
       >
         {selectedUser ? (
-          <View
-            style={{
-              flex: 1,
-              flexDirection: isRtl ? "row-reverse" : "row",
-              alignItems: "center",
-              gap: 12,
-            }}
-          >
-            <Avatar name={selectedUser.name} isOnApp size={36} />
+          <View style={{ flex: 1, flexDirection: isRtl ? "row-reverse" : "row", alignItems: "center", gap: 12 }}>
+            <Avatar name={selectedUser.name} isOnApp size={36} isDark={isDark} />
             <View style={{ flex: 1 }}>
-              <Text
-                style={{
-                  color: "#1F2937",
-                  fontWeight: "600",
-                  textAlign: isRtl ? "right" : "left",
-                }}
-              >
+              <Text style={{ color: isDark ? "#E0E0E0" : "#1F2937", fontWeight: "600", textAlign: isRtl ? "right" : "left" }}>
                 {selectedUser.name}
               </Text>
               {selectedUser.number ? (
-                <Text
-                  style={{
-                    color: "#9CA3AF",
-                    fontSize: 12,
-                    textAlign: isRtl ? "right" : "left",
-                  }}
-                >
+                <Text style={{ color: isDark ? "rgba(255,255,255,0.4)" : "#9CA3AF", fontSize: 12, textAlign: isRtl ? "right" : "left" }}>
                   {String(selectedUser.number)}
                 </Text>
               ) : null}
             </View>
-            <Text style={{ color: "#9CA3AF" }}>▾</Text>
+            <Text style={{ color: isDark ? "rgba(255,255,255,0.4)" : "#9CA3AF" }}>▾</Text>
           </View>
         ) : (
-          <View
-            style={{
-              flex: 1,
-              flexDirection: isRtl ? "row-reverse" : "row",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <Text style={{ color: "#9CA3AF", fontSize: 15 }}>{placeholder}</Text>
-            <Text style={{ color: "#9CA3AF" }}>▾</Text>
+          <View style={{ flex: 1, flexDirection: isRtl ? "row-reverse" : "row", justifyContent: "space-between", alignItems: "center" }}>
+            <Text style={{ color: isDark ? "rgba(255,255,255,0.3)" : "#9CA3AF", fontSize: 15 }}>{placeholder}</Text>
+            <Text style={{ color: isDark ? "rgba(255,255,255,0.3)" : "#9CA3AF" }}>▾</Text>
           </View>
         )}
       </TouchableOpacity>
 
       {/* ── Modal ── */}
-      <Modal
-        visible={visible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setVisible(false)}
-      >
+      <Modal visible={visible} transparent animationType="slide" onRequestClose={() => setVisible(false)}>
         <Pressable
-          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}
+          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" }}
           onPress={() => setVisible(false)}
         >
           <Pressable
-            style={{ backgroundColor: "white", borderTopLeftRadius: 28, borderTopRightRadius: 28 }}
+            style={[styles.modalContent, isDark && styles.modalContentDark]}
             onPress={(e) => e.stopPropagation()}
           >
             {/* Handle */}
             <View style={{ alignItems: "center", paddingTop: 12, paddingBottom: 4 }}>
-              <View style={{ width: 40, height: 4, backgroundColor: "#E5E7EB", borderRadius: 2 }} />
+              <View style={{ width: 40, height: 4, backgroundColor: isDark ? "rgba(255,255,255,0.15)" : "#E5E7EB", borderRadius: 2 }} />
             </View>
 
             <View style={{ paddingHorizontal: 20, paddingBottom: 8, paddingTop: 12 }}>
               {/* Title */}
-              <Text
-                style={{
-                  fontSize: 18,
-                  fontWeight: "bold",
-                  color: "#1F2937",
-                  marginBottom: 16,
-                  textAlign: isRtl ? "right" : "left",
-                }}
-              >
+              <Text style={{ fontSize: 18, fontWeight: "bold", color: isDark ? "#E0E0E0" : "#1F2937", marginBottom: 16, textAlign: isRtl ? "right" : "left" }}>
                 {label}
               </Text>
 
               {/* Search Input */}
-              <View
-                style={{
-                  flexDirection: isRtl ? "row-reverse" : "row",
-                  alignItems: "center",
-                  backgroundColor: "#F3F4F6",
-                  borderRadius: 14,
-                  paddingHorizontal: 14,
-                  marginBottom: 16,
-                }}
-              >
-                <Text style={{ color: "#9CA3AF", marginRight: isRtl ? 0 : 8, marginLeft: isRtl ? 8 : 0 }}>
+              <View style={[styles.searchBox, isDark && styles.searchBoxDark, { flexDirection: isRtl ? "row-reverse" : "row" }]}>
+                <Text style={{ color: isDark ? "rgba(255,255,255,0.4)" : "#9CA3AF", marginRight: isRtl ? 0 : 8, marginLeft: isRtl ? 8 : 0 }}>
                   🔍
                 </Text>
                 <TextInput
                   value={search}
                   onChangeText={handleSearchChange}
                   placeholder={s.searchPlaceholder}
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={isDark ? "rgba(255,255,255,0.3)" : "#9CA3AF"}
                   autoFocus
                   keyboardType="default"
-                  style={{
-                    flex: 1,
-                    paddingVertical: 12,
-                    color: "#1F2937",
-                    fontSize: 15,
-                    textAlign: isRtl ? "right" : "left",
-                  }}
+                  style={{ flex: 1, paddingVertical: 12, color: isDark ? "#E0E0E0" : "#1F2937", fontSize: 15, textAlign: isRtl ? "right" : "left" }}
                 />
                 {search.length > 0 && (
                   <TouchableOpacity onPress={() => { setSearch(""); setPhoneSearchResult(null); }}>
-                    <Text style={{ color: "#9CA3AF", fontSize: 18 }}>✕</Text>
+                    <Text style={{ color: isDark ? "rgba(255,255,255,0.4)" : "#9CA3AF", fontSize: 18 }}>✕</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -564,13 +438,13 @@ export function UserPicker({
 }
 
 // ─── SectionHeader ────────────────────────────────────────────────────────────
-function SectionHeader({ text }: { text: string }) {
+function SectionHeader({ text, isDark }: { text: string; isDark: boolean }) {
   return (
     <Text
       style={{
         fontSize: 11,
         fontWeight: "700",
-        color: "#9CA3AF",
+        color: isDark ? "rgba(255,255,255,0.35)" : "#9CA3AF",
         letterSpacing: 0.8,
         textTransform: "uppercase",
         marginBottom: 8,
@@ -582,3 +456,38 @@ function SectionHeader({ text }: { text: string }) {
     </Text>
   );
 }
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+const styles = StyleSheet.create({
+  trigger: {
+    backgroundColor: "white",
+    borderRadius: 16,
+    alignItems: "center",
+    paddingHorizontal: 16,
+    height: 64,
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: "rgba(124,58,237,0.06)",
+  },
+  triggerDark: {
+    backgroundColor: "#1C1F2A",
+    borderColor: "rgba(255,255,255,0.07)",
+  },
+  modalContent: {
+    backgroundColor: "white",
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+  },
+  modalContentDark: { backgroundColor: "#1C1F2A" },
+  searchBox: {
+    alignItems: "center",
+    backgroundColor: "#F3F4F6",
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    marginBottom: 16,
+  },
+  searchBoxDark: { backgroundColor: "rgba(255,255,255,0.07)" },
+});

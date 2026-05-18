@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
   KeyboardAvoidingView,
@@ -17,6 +17,7 @@ import {
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 import { useI18n } from "@/hooks/use-i18n";
+import { useThemeMode } from "@/src/providers/ThemeModeProvider";
 import { AmountInput } from "@/src/features/transfer/components/AmountInput";
 import { CategoryPicker } from "@/src/features/transfer/components/CategoryPicker";
 import { ConfirmBottomSheet } from "@/src/features/transfer/components/ConfirmBottomSheet";
@@ -106,8 +107,11 @@ export default function QRSendScreen() {
   const { user } = useAuth();
   const CURRENT_USER_UID = user?.uid ?? "";
   const { language, isRtl } = useI18n();
+  const { colorScheme } = useThemeMode();
+  const isDark = colorScheme === "dark";
   const s = STRINGS[language as "en" | "ar"] ?? STRINGS.en;
 
+  // Recipient is fixed from the scanned QR — the user cannot change it on this screen.
   const recipient: AppUser = {
     uid: uid ?? "",
     name: name ?? "",
@@ -185,6 +189,7 @@ export default function QRSendScreen() {
   };
 
   // ── Confirm from bottom sheet ─────────────────────────────────────────────
+  // Reuses transferService.sendMoney — no separate QR payment logic needed.
   const handleConfirm = async () => {
     const parsed = parseFloat(amount);
     const error = await executeSend({
@@ -210,7 +215,7 @@ export default function QRSendScreen() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <View style={styles.root}>
+      <View style={[styles.root, isDark && styles.rootDark]}>
         <StatusBar barStyle="light-content" />
 
         {/* ── Gradient Header ── */}
@@ -307,7 +312,7 @@ export default function QRSendScreen() {
 
             {/* ── My Wallet ── */}
             <View style={styles.section}>
-              <Label text={s.myWallet} isRtl={isRtl} />
+              <Label text={s.myWallet} isRtl={isRtl} isDark={isDark} />
               <WalletPicker
                 label={s.myWallet}
                 placeholder={s.selectWallet}
@@ -342,7 +347,7 @@ export default function QRSendScreen() {
                   },
                 ]}
               >
-                <Label text={s.amount} isRtl={isRtl} />
+                <Label text={s.amount} isRtl={isRtl} isDark={isDark} />
                 <AmountInput
                   amount={amount}
                   currency={currency}
@@ -360,7 +365,7 @@ export default function QRSendScreen() {
 
             {/* ── Category ── */}
             <View style={styles.section}>
-              <Label text={s.category} isRtl={isRtl} />
+              <Label text={s.category} isRtl={isRtl} isDark={isDark} />
               <CategoryPicker
                 label={s.selectCategory}
                 selected={category}
@@ -372,18 +377,18 @@ export default function QRSendScreen() {
 
             {/* ── Note ── */}
             <View style={styles.section}>
-              <Label text={s.noteOptional} isRtl={isRtl} />
-              <View style={styles.noteBox}>
+              <Label text={s.noteOptional} isRtl={isRtl} isDark={isDark} />
+              <View style={[styles.noteBox, isDark && styles.noteBoxDark]}>
                 <TextInput
                   value={note}
                   onChangeText={setNote}
                   placeholder={s.notePlaceholder}
-                  placeholderTextColor="#9CA3AF"
+                  placeholderTextColor={isDark ? "rgba(255,255,255,0.3)" : "#9CA3AF"}
                   multiline
                   numberOfLines={3}
                   textAlignVertical="top"
                   textAlign={isRtl ? "right" : "left"}
-                  style={styles.noteInput}
+                  style={[styles.noteInput, isDark && styles.noteInputDark]}
                 />
                 <Text
                   style={[
@@ -443,11 +448,12 @@ export default function QRSendScreen() {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function Label({ text, isRtl }: { text: string; isRtl: boolean }) {
+function Label({ text, isRtl, isDark }: { text: string; isRtl: boolean; isDark?: boolean }) {
   return (
     <Text
       style={[
         styles.label,
+        isDark && styles.labelDark,
         {
           textAlign: isRtl ? "right" : "left",
           marginLeft: isRtl ? 0 : 4,
@@ -651,4 +657,8 @@ const styles = StyleSheet.create({
     color: "white",
     letterSpacing: 0.3,
   },
+  rootDark: { backgroundColor: "#0E1118" },
+  labelDark: { color: "rgba(255,255,255,0.5)" },
+  noteBoxDark: { backgroundColor: "#1C1F2A", borderColor: "rgba(255,255,255,0.07)" },
+  noteInputDark: { color: "#E0E0E0" },
 });

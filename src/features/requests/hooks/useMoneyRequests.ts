@@ -10,6 +10,8 @@ export interface MoneyRequestItem {
   fromUserId: string;
   toUserId: string;
   amount: number;
+  // "currancy" is an intentional typo that matches the field name in the Firebase DB.
+  // Do not rename — changing it here will break reads against the existing schema.
   currancy: string;
   category: string;
   note: string;
@@ -44,7 +46,8 @@ export function useMoneyRequests(currentUid: string) {
         ([id, data]) => ({ id, ...data }),
       );
 
-      // جيب أسماء المستخدمين الآخرين
+      // Request records only store UIDs. We fetch the other party's name and
+      // phone number here so the list screen can display them without extra calls.
       const enriched = await Promise.all(
         items.map(async (item) => {
           const otherUid =
@@ -64,14 +67,17 @@ export function useMoneyRequests(currentUid: string) {
         }),
       );
 
-      // Received = أنا الدافع (toUserId)
+      // transferService writes each request to both the sender's and the
+      // recipient's moneyRequests node, so every request appears in both
+      // users' lists. We split here by role:
+      // toUserId = the user being asked to pay (received tab)
       setReceived(
         enriched
           .filter((i) => i.toUserId === currentUid)
           .sort((a, b) => b.createdAt - a.createdAt),
       );
 
-      // Sent = أنا الطالب (fromUserId)
+      // fromUserId = the user who initiated the request (sent tab)
       setSent(
         enriched
           .filter((i) => i.fromUserId === currentUid)

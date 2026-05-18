@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import React, { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import {
   Animated,
   Modal,
@@ -9,6 +9,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+
+import { useThemeMode } from "@/src/providers/ThemeModeProvider";
 
 interface Props {
   visible: boolean;
@@ -27,6 +29,8 @@ export function NotificationModal({
 }: Props) {
   const scaleAnim = useRef(new Animated.Value(0.85)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
+  const { colorScheme } = useThemeMode();
+  const isDark = colorScheme === "dark";
 
   useEffect(() => {
     if (visible) {
@@ -63,6 +67,7 @@ export function NotificationModal({
         <Animated.View
           style={[
             styles.card,
+            isDark && styles.cardDark,
             { transform: [{ scale: scaleAnim }], opacity: opacityAnim },
           ]}
         >
@@ -76,17 +81,14 @@ export function NotificationModal({
           <Text
             style={[
               styles.message,
+              isDark && styles.messageDark,
               { textAlign: language === "ar" ? "right" : "center" },
             ]}
           >
             {message}
           </Text>
 
-          <TouchableOpacity
-            onPress={onDismiss}
-            activeOpacity={0.85}
-            style={styles.btnOuter}
-          >
+          <TouchableOpacity onPress={onDismiss} activeOpacity={0.85} style={styles.btnOuter}>
             <LinearGradient
               colors={["#7C3AED", "#6D28D9"]}
               start={{ x: 0, y: 0 }}
@@ -107,7 +109,7 @@ export function NotificationModal({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.45)",
+    backgroundColor: "rgba(0,0,0,0.55)",
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 32,
@@ -125,9 +127,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     elevation: 12,
   },
-  icon: {
-    marginBottom: 16,
-  },
+  cardDark: { backgroundColor: "#1C1F2A" },
+  icon: { marginBottom: 16 },
   message: {
     fontSize: 16,
     color: "#1F2937",
@@ -136,21 +137,8 @@ const styles = StyleSheet.create({
     marginBottom: 28,
     textAlign: "center",
   },
-  btnOuter: {
-    width: "100%",
-    borderRadius: 16,
-    overflow: "hidden",
-  },
-  btn: {
-    height: 52,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 16,
-  },
-  btnText: {
-    color: "white",
-    fontWeight: "bold",
-    fontSize: 16,
-    letterSpacing: 0.3,
-  },
+  messageDark: { color: "#E0E0E0" },
+  btnOuter: { width: "100%", borderRadius: 16, overflow: "hidden" },
+  btn: { height: 52, alignItems: "center", justifyContent: "center", borderRadius: 16 },
+  btnText: { color: "white", fontWeight: "bold", fontSize: 16, letterSpacing: 0.3 },
 });

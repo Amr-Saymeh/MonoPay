@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { get, ref } from "firebase/database";
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   ActivityIndicator,
   Platform,
@@ -13,6 +13,7 @@ import {
 } from "react-native";
 
 import { useI18n } from "@/hooks/use-i18n";
+import { useThemeMode } from "@/src/providers/ThemeModeProvider";
 import { NotificationModal } from "@/src/features/transfer/components/NotificationModal";
 import { AppUser } from "@/src/features/transfer/types/index";
 import { db } from "@/src/firebaseConfig";
@@ -42,6 +43,8 @@ export default function ScanQRScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { language, isRtl } = useI18n();
+  const { colorScheme } = useThemeMode();
+  const isDark = colorScheme === "dark";
   const s = STRINGS[language as "en" | "ar"] ?? STRINGS.en;
 
   const currentUid = user?.uid ?? "";
@@ -51,6 +54,7 @@ export default function ScanQRScreen() {
   const handleScanned = async (scannedValue: string) => {
     const uid = scannedValue.trim();
 
+    // First guard: prevent sending to yourself.
     if (uid === currentUid) {
       setNotif({ type: "error", msg: s.ownQR });
       return;
@@ -61,6 +65,8 @@ export default function ScanQRScreen() {
     try {
       const snap = await get(ref(db, `users/${uid}`));
 
+      // Second guard: the QR must belong to an active MonoPay user (type === 1).
+      // type 0 = pending approval, type 2 = admin — neither should receive payments.
       if (!snap.exists() || snap.val()?.type !== 1) {
         setNotif({ type: "error", msg: s.invalidQR });
         return;
@@ -68,6 +74,8 @@ export default function ScanQRScreen() {
 
       const data = snap.val() as Omit<AppUser, "uid">;
 
+      // replace() instead of push() so the user can't navigate back to the
+      // camera after a successful scan — they go back to the previous screen instead.
       router.replace({
         pathname: "/qr-send",
         params: {
@@ -84,7 +92,7 @@ export default function ScanQRScreen() {
   };
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, isDark && styles.rootDark]}>
       <StatusBar barStyle="light-content" />
 
       {/* ── Gradient Header ── */}
@@ -132,10 +140,10 @@ export default function ScanQRScreen() {
       {/* ── Camera area ── */}
       <View style={styles.cameraContainer}>
         {resolving ? (
-          <View style={styles.resolvingOverlay}>
-            <View style={styles.resolvingCard}>
+          <View style={[styles.resolvingOverlay, isDark && styles.resolvingOverlayDark]}>
+            <View style={[styles.resolvingCard, isDark && styles.resolvingCardDark]}>
               <ActivityIndicator size="large" color="#7C3AED" />
-              <Text style={styles.resolvingText}>{s.loading}</Text>
+              <Text style={[styles.resolvingText, isDark && styles.resolvingTextDark]}>{s.loading}</Text>
             </View>
           </View>
         ) : (
@@ -205,4 +213,8 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "500",
   },
+  rootDark: { backgroundColor: "#0E1118" },
+  resolvingOverlayDark: { backgroundColor: "#0E1118" },
+  resolvingCardDark: { backgroundColor: "#1C1F2A" },
+  resolvingTextDark: { color: "#E0E0E0" },
 });
