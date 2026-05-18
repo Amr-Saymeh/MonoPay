@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useRouter } from "expo-router";
@@ -16,6 +16,7 @@ import {
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useI18n } from "@/hooks/use-i18n";
 import { db } from "@/src/firebaseConfig";
 import { useAuth } from "@/src/providers/AuthProvider";
@@ -31,6 +32,7 @@ export default function MyWalletsScreen() {
   const router = useRouter();
   const { t } = useI18n();
   const { user } = useAuth();
+  const colorScheme = useColorScheme() ?? "light";
   const { width: screenWidth } = useWindowDimensions();
   const carouselListRef = useRef<FlatList<WalletCard> | null>(null);
 
@@ -202,9 +204,13 @@ export default function MyWalletsScreen() {
 
         <Pressable
           onPress={() => router.push("/wallets/add")}
-          style={({ pressed }) => [styles.addButton, pressed ? styles.pressed : null]}
+          style={({ pressed }) => [
+            styles.addButton,
+            { backgroundColor: colorScheme === "light" ? "#6D28D9" : "#7C3AED" },
+            pressed ? styles.pressed : null,
+          ]}
         >
-          <MaterialIcons name="add" size={22} color="#fff" />
+          <MaterialIcons name="add" size={22} color="#6D28D9" />
         </Pressable>
       </View>
 

@@ -1,9 +1,9 @@
-import React from "react";
 
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Pressable, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
+import { useThemeColor } from "@/hooks/use-theme-color";
 
 import { styles } from "../styles";
 import type { WalletType } from "../types";
@@ -25,6 +25,10 @@ export function WalletTypeSelector({
   selectedType,
   onSelect,
 }: WalletTypeSelectorProps) {
+  const surfaceColor = useThemeColor({}, "surface");
+  const borderColor = useThemeColor({}, "border");
+  const iconColor = useThemeColor({}, "icon");
+
   return (
     <View style={styles.typeRow}>
       {options.map((option) => {
@@ -36,6 +40,7 @@ export function WalletTypeSelector({
             onPress={() => onSelect(option.key)}
             style={({ pressed }) => [
               styles.typeCard,
+              { backgroundColor: surfaceColor, borderColor },
               selected ? styles.typeCardSelected : null,
               pressed ? styles.pressed : null,
             ]}
@@ -43,7 +48,7 @@ export function WalletTypeSelector({
             <MaterialIcons
               name={option.icon}
               size={22}
-              color={selected ? "#7C3AED" : "rgba(17,24,28,0.55)"}
+              color={selected ? "#7C3AED" : iconColor}
             />
             <ThemedText type="defaultSemiBold">{option.label}</ThemedText>
           </Pressable>

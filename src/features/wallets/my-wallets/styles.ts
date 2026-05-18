@@ -107,7 +107,7 @@ export const styles = StyleSheet.create({
     backgroundColor: "rgba(220,38,38,0.55)",
   },
   deleteButtonText: {
-    color: "#fff",
+    color: "#db321c",
   },
   sharedButton: {
     marginTop: 10,

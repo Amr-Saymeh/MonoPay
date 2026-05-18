@@ -1,16 +1,15 @@
-import React from "react";
 
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Pressable, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useI18n } from "@/hooks/use-i18n";
 
 import { useUserLabel } from "@/hooks/use-user-label";
 import { styles } from "../styles";
 import type { WalletCard } from "../types";
-import { formatCurrency, getBalances } from "../utils";
 
 type WalletDetailsCardProps = {
   deleting: boolean;
@@ -30,8 +29,14 @@ export function WalletDetailsCard({
   onManageShared,
 }: WalletDetailsCardProps) {
   const { t } = useI18n();
-  const ownerUid = String(selected?.wallet?.type ?? "") === "shared" ? selected?.wallet?.ownerUid : null;
+  const colorScheme = useColorScheme() ?? "light";
+  const isSharedWallet = String(selected?.wallet?.type ?? "") === "shared";
+  const ownerUid = isSharedWallet ? selected?.wallet?.ownerUid : null;
   const resolvedOwnerLabel = useUserLabel(ownerUid);
+
+  const deleteButtonColor = colorScheme === "light" ? "#B91C1C" : "#DC2626";
+  const deleteButtonDisabledColor =
+    colorScheme === "light" ? "rgba(185,28,28,0.55)" : "rgba(220,38,38,0.55)";
 
   return (
     <ThemedView style={styles.detailsCard}>
@@ -74,22 +79,10 @@ export function WalletDetailsCard({
         </>
       ) : null}
 
-      <View style={styles.divider} />
+      {isSharedWallet ? <View style={styles.divider} /> : null}
 
-      <View style={styles.detailRow}>
-        <ThemedText style={styles.detailLabel}>{t("walletCurrencies")}</ThemedText>
-        <ThemedText type="defaultSemiBold" style={styles.detailValue}>
-          {getBalances(selected?.wallet).length > 0
-            ? getBalances(selected?.wallet)
-                .map(([code, amount]) => `${formatCurrency(code)}: ${amount}`)
-                .join("  ")
-            : "—"}
-        </ThemedText>
-      </View>
-
-      {String(selected?.wallet?.type ?? "") === "shared" ? (
+      {isSharedWallet ? (
         <>
-          <View style={styles.divider} />
           <View style={styles.detailRow}>
             <ThemedText style={styles.detailLabel}>{t("walletOwner")}</ThemedText>
             <ThemedText type="defaultSemiBold" style={styles.detailValue}>
@@ -127,11 +120,11 @@ export function WalletDetailsCard({
         onPress={onDelete}
         style={({ pressed }) => [
           styles.deleteButton,
-          deleting ? styles.deleteButtonDisabled : null,
+          { backgroundColor: deleting ? deleteButtonDisabledColor : deleteButtonColor },
           pressed ? styles.pressed : null,
         ]}
       >
-        <MaterialIcons name="delete" size={18} color="#fff" />
+        <MaterialIcons name="delete" size={18} color="#db321c" />
         <ThemedText type="defaultSemiBold" style={styles.deleteButtonText}>
           {deleting ? t("deleting") : t("deleteWallet")}
         </ThemedText>
