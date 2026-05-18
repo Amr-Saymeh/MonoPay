@@ -10,7 +10,7 @@ import { AmountModal } from './components/AmountModal';
 import { BalanceActions } from './components/BalanceActions';
 import { HistorySection } from './components/HistorySection';
 import { MemberSection } from './components/MemberSection';
-import { SharedWalletCard } from './components/SharedWalletCard';
+import { SharedCard } from '../card/SharedCard';
 import { SharedWalletRepositoryProvider } from './context/SharedWalletRepositoryContext';
 import { useSharedWalletScreen } from './hooks/useSharedWalletScreen';
 
@@ -68,12 +68,12 @@ function SharedScreenContent() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <SharedWalletCard
+        <SharedCard
           name={wallet.name}
-          walletState={wallet.walletState}
-          memberCount={members.memberProfiles.length}
+          currencies={balance.balances.map(([code, amt]) => ({ code, balance: amt }))}
           ownerLabel={wallet.ownerLabel}
-          totalBalance={balance.totalBalance}
+          memberUids={members.memberProfiles.map(m => m.uid)}
+          walletState={wallet.walletState}
         />
 
         <MemberSection
