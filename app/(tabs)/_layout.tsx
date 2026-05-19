@@ -15,7 +15,6 @@ export default function TabLayout() {
 
   const activeColor = colorScheme === "dark" ? "#a78bfa" : "#6e5da9";
   const hiddenSettingsRoutes = new Set(["category-suggestions", "avatar-camera"]);
-  const hiddenWalletRoutes = new Set(["add"]);
 
   return (
     <Tabs
@@ -102,14 +101,7 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="wallets"
-        options={({ route }) => ({
-          href: null,
-          tabBarStyle: hiddenWalletRoutes.has(
-            getFocusedRouteNameFromRoute(route) ?? "",
-          )
-            ? { display: "none" }
-            : styles.tabBar,
-        })}
+        options={{ href: null, tabBarStyle: { display: "none" } }}
       />
     </Tabs>
   );
