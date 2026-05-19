@@ -1,1 +1,1 @@
-export { default } from "@/src/features/transfer/screens/SendMoneyScreen";
+export { default } from "@/src/features/qr/screens/QRSendScreen";
