@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { useState, useCallback, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE, CACHE_TTL_MS, FALLBACK_RATES } from '../constants';
@@ -22,8 +23,8 @@ export function useCurrencyRates() {
         }
       }
 
-      const res = await fetch('https://open.er-api.com/v6/latest/ILS');
-      const json = await res.json();
+      const response = await axios.get('https://open.er-api.com/v6/latest/ILS');
+      const json = response.data;
 
       if (json.result !== 'success') throw new Error('API error');
 
