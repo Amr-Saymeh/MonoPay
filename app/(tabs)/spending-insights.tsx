@@ -14,13 +14,14 @@ import { styles } from "@/src/features/insights/styles";
 import { ChartView, FlowFilter, SortMode, TimeWindow } from "@/src/features/insights/utils/insights";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { useState } from "react";
-import { LayoutChangeEvent, ScrollView } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { LayoutChangeEvent, ScrollView, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function SpendingInsightsScreen() {
   const { user, profile } = useAuth();
   const { t, language, isRtl } = useI18n();
   const palette = useInsightsPalette();
+  const insets = useSafeAreaInsets();
   const [timeWindow, setTimeWindow] = useState<TimeWindow>("30D");
   const [flow, setFlow] = useState<FlowFilter>("all");
   const [currency, setCurrency] = useState("ALL");
@@ -40,7 +41,7 @@ export default function SpendingInsightsScreen() {
     filtered,
     health,
     highlights,
-    incomeTotal,
+    incomeTotal, 
     largestEntry,
     loaded,
     maxTrend,
@@ -74,8 +75,17 @@ export default function SpendingInsightsScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.screen, { backgroundColor: palette.bg }]}> 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+    <View style={[styles.screen, { backgroundColor: palette.bg }]}> 
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingTop: insets.top + 18,
+            paddingBottom: Math.max(30, insets.bottom + 30),
+          },
+        ]}
+      >
         <HeroSection
           avg={avg}
           filteredLength={filtered.length}
@@ -163,6 +173,6 @@ export default function SpendingInsightsScreen() {
           sortMode={sortMode}
         />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }

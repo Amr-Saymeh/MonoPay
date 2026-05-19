@@ -1,7 +1,6 @@
-import React from "react";
 
 import { ActivityIndicator, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { styles } from "../styles";
 
@@ -16,12 +15,23 @@ export function InsightsLoading({
   loadingColor,
   mutedColor,
 }: InsightsLoadingProps) {
+  const insets = useSafeAreaInsets();
+
   return (
-    <SafeAreaView style={[styles.screen, { backgroundColor }]}>
+    <View
+      style={[
+        styles.screen,
+        {
+          backgroundColor,
+          paddingTop: insets.top,
+          paddingBottom: insets.bottom,
+        },
+      ]}
+    >
       <View style={styles.loading}>
         <ActivityIndicator size="large" color={loadingColor} />
         <Text style={[styles.loadingText, { color: mutedColor }]}>Preparing your insights…</Text>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
