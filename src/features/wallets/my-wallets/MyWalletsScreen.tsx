@@ -89,17 +89,52 @@ export default function MyWalletsScreen() {
     const deleteWalletId = selected.walletid;
     const mainWalletId = mainWallet.walletid;
 
-    const [mainSnapshot, walletSnapshot] = await Promise.all([
-      get(ref(db, `wallets/wallet${mainWalletId}/currancies`)),
+    const normalizeCurrencyKey = (value: string) => value.trim().toLowerCase();
+    const addNormalizedCurrencies = (
+      target: Record<string, number>,
+      source: Record<string, unknown> | null | undefined,
+    ) => {
+      for (const [rawCode, rawAmount] of Object.entries(source ?? {})) {
+        const code = normalizeCurrencyKey(rawCode);
+        if (!code) continue;
+        const amount = Number(rawAmount);
+        if (!Number.isFinite(amount)) continue;
+        const previous = Number(target[code] ?? 0);
+        target[code] = (Number.isFinite(previous) ? previous : 0) + amount;
+      }
+    };
+
+    const buildWalletCurrencyMap = (record: WalletRecord): Record<string, number> => {
+      const primary: Record<string, number> = {};
+      addNormalizedCurrencies(primary, record.currancies);
+
+      const fallback: Record<string, number> = {};
+      addNormalizedCurrencies(fallback, record.currencies);
+
+      if (Object.keys(primary).length === 0) return fallback;
+
+      for (const [code, amount] of Object.entries(fallback)) {
+        if (primary[code] === undefined) primary[code] = amount;
+      }
+
+      return primary;
+    };
+
+    const [mainWalletSnapshot, walletSnapshot] = await Promise.all([
+      get(ref(db, `wallets/wallet${mainWalletId}`)),
       get(ref(db, `wallets/wallet${deleteWalletId}`)),
     ]);
 
-    const mainCurrencies = (mainSnapshot.val() ?? {}) as Record<string, number>;
+    const mainWalletRecord = (mainWalletSnapshot.val() ?? null) as WalletRecord | null;
     const walletRecord = (walletSnapshot.val() ?? null) as WalletRecord | null;
-    const deletedCurrencies = (walletRecord?.currancies ?? {}) as Record<string, number>;
 
     if (!walletRecord) {
       Alert.alert(t("error"), t("walletNotFound"));
+      return;
+    }
+
+    if (!mainWalletRecord) {
+      Alert.alert(t("error"), t("mainWalletNotFound"));
       return;
     }
 
@@ -112,18 +147,19 @@ export default function MyWalletsScreen() {
       return;
     }
 
-    const mergedCurrencies: Record<string, number> = { ...mainCurrencies };
-    for (const [code, amount] of Object.entries(deletedCurrencies)) {
-      const numericAmount = Number(amount);
-      if (!Number.isFinite(numericAmount)) continue;
-      const previousAmount = Number(mergedCurrencies[code] ?? 0);
-      mergedCurrencies[code] = (Number.isFinite(previousAmount) ? previousAmount : 0) + numericAmount;
-    }
+    const mergedCurrencies: Record<string, number> = {
+      ...buildWalletCurrencyMap(mainWalletRecord),
+    };
+    addNormalizedCurrencies(mergedCurrencies, buildWalletCurrencyMap(walletRecord));
 
     const updates: Record<string, unknown> = {
       [`wallets/wallet${mainWalletId}/currancies`]: mergedCurrencies,
       [`wallets/wallet${deleteWalletId}`]: null,
     };
+
+    if (mainWalletRecord.currencies && typeof mainWalletRecord.currencies === "object") {
+      updates[`wallets/wallet${mainWalletId}/currencies`] = mergedCurrencies;
+    }
 
     for (const [key, link] of Object.entries(userWallets)) {
       if (Number(link?.walletid) === deleteWalletId) {

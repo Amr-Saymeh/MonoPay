@@ -1,6 +1,8 @@
 
+import type { Ref } from "react";
+
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { Pressable, View } from "react-native";
+import { Pressable, View, type TextInput } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { AuthInput } from "@/components/ui/auth-input";
@@ -15,6 +17,9 @@ type InitialBalancesSectionProps = {
   onAddBalance: () => void;
   onCycleCurrency: (rowId: string) => void;
   onAmountChange: (rowId: string, text: string) => void;
+  firstAmountInputRef?: Ref<TextInput>;
+  onFirstAmountFocus?: () => void;
+  onFirstAmountSubmit?: () => void;
 };
 
 export function InitialBalancesSection({
@@ -23,6 +28,9 @@ export function InitialBalancesSection({
   onAddBalance,
   onCycleCurrency,
   onAmountChange,
+  firstAmountInputRef,
+  onFirstAmountFocus,
+  onFirstAmountSubmit,
 }: InitialBalancesSectionProps) {
   const surfaceColor = useThemeColor({}, "surface");
   const borderColor = useThemeColor({}, "border");
@@ -40,7 +48,7 @@ export function InitialBalancesSection({
       </View>
 
       <View style={styles.balancesList}>
-        {balances.map((row) => (
+        {balances.map((row, index) => (
           <View key={row.id} style={styles.balanceRow}>
             <Pressable
               onPress={() => onCycleCurrency(row.id)}
@@ -54,10 +62,14 @@ export function InitialBalancesSection({
             </Pressable>
             <View style={{ flex: 1 }}>
               <AuthInput
+                ref={index === 0 ? firstAmountInputRef : undefined}
                 value={row.amount}
                 onChangeText={(text) => onAmountChange(row.id, text)}
                 placeholder="0"
                 keyboardType="numeric"
+                onFocus={index === 0 ? onFirstAmountFocus : undefined}
+                returnKeyType={index === 0 ? "done" : undefined}
+                onSubmitEditing={index === 0 ? onFirstAmountSubmit : undefined}
               />
             </View>
           </View>

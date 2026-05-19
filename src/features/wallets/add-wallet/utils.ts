@@ -22,6 +22,12 @@ export function isValidExpiry(value: string) {
   return /^(0[1-9]|1[0-2])\/(\d{2})$/.test(normalized);
 }
 
+export function formatExpiryInput(value: string) {
+  const digitsOnly = value.replace(/\D/g, "").slice(0, 4);
+  if (digitsOnly.length <= 2) return digitsOnly;
+  return `${digitsOnly.slice(0, 2)}/${digitsOnly.slice(2)}`;
+}
+
 export function getNextUserWalletKey(userWallets: Record<string, unknown>) {
   const maxIndex = Object.keys(userWallets).reduce((accumulator, key) => {
     const match = /^wallet(\d+)$/.exec(key);
