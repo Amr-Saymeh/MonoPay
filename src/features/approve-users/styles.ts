@@ -140,7 +140,7 @@ export const styles = StyleSheet.create({
     alignItems: "center",
   },
   actionLabel: {
-    color: "#fff",
+    color: "#28d6ab",
   },
   actionApprove: {
     backgroundColor: "#16a34a",

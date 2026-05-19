@@ -1,8 +1,16 @@
-import { useState } from "react";
+import { useCallback, useRef, useState, type RefObject } from "react";
 
 import { useHeaderHeight } from "@react-navigation/elements";
 import { useRouter } from "expo-router";
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView } from "react-native";
+import {
+    Alert,
+    Keyboard,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    findNodeHandle,
+    type TextInput
+} from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -25,6 +33,7 @@ import {
     EMOJI_OPTIONS,
     TYPE_OPTIONS,
     buildPreviewCurrencies,
+    formatExpiryInput,
     getDefaultColor,
     isValidExpiry,
     nextCurrency,
@@ -36,6 +45,32 @@ export default function AddWalletScreen() {
   const { t } = useI18n();
   const { user } = useAuth();
   const headerHeight = useHeaderHeight();
+
+  const scrollRef = useRef<ScrollView | null>(null);
+
+  const scrollToField = useCallback(
+    (fieldRef: RefObject<TextInput | null>) => {
+      const node = findNodeHandle(fieldRef.current);
+      if (!node) return;
+
+      setTimeout(
+        () => {
+          (scrollRef.current as any)?.scrollResponderScrollNativeHandleToKeyboard?.(
+            node,
+            96,
+            true,
+          );
+        },
+        Platform.OS === "android" ? 80 : 0,
+      );
+    },
+    [],
+  );
+
+  const walletNameRef = useRef<TextInput | null>(null);
+  const creditExpiryRef = useRef<TextInput | null>(null);
+  const sharedSearchRef = useRef<TextInput | null>(null);
+  const firstAmountRef = useRef<TextInput | null>(null);
 
   const [walletName, setWalletName] = useState("");
   const [walletType, setWalletType] = useState<WalletType>("real");
@@ -175,9 +210,15 @@ export default function AddWalletScreen() {
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={headerHeight}
+        keyboardVerticalOffset={Platform.OS === "ios" ? headerHeight : 0}
       >
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          ref={scrollRef}
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          showsVerticalScrollIndicator={false}
+        >
           <ThemedText type="subtitle" style={styles.heading}>
             {t("addWallet")}
           </ThemedText>
@@ -193,10 +234,27 @@ export default function AddWalletScreen() {
           <ThemedView style={styles.section}>
             <ThemedText style={styles.sectionTitle}>{t("walletName")}</ThemedText>
             <AuthInput
+              ref={walletNameRef}
               value={walletName}
               onChangeText={setWalletName}
               placeholder={t("walletNamePlaceholder")}
               autoCapitalize="words"
+              returnKeyType="next"
+              blurOnSubmit={false}
+              onFocus={() => scrollToField(walletNameRef)}
+              onSubmitEditing={() => {
+                if (walletType === "credit") {
+                  creditExpiryRef.current?.focus();
+                  return;
+                }
+
+                if (walletType === "shared") {
+                  sharedSearchRef.current?.focus();
+                  return;
+                }
+
+                firstAmountRef.current?.focus();
+              }}
             />
           </ThemedView>
 
@@ -213,11 +271,17 @@ export default function AddWalletScreen() {
             <ThemedView style={styles.section}>
               <ThemedText style={styles.sectionTitle}>{t("walletExpiry")} (MM/YY)</ThemedText>
               <AuthInput
+                ref={creditExpiryRef}
                 value={creditExpiry}
-                onChangeText={setCreditExpiry}
+                onChangeText={(text) => setCreditExpiry(formatExpiryInput(text))}
                 placeholder="12/30"
-                keyboardType="numeric"
+                keyboardType="number-pad"
                 autoCapitalize="none"
+                maxLength={5}
+                returnKeyType="next"
+                blurOnSubmit={false}
+                onFocus={() => scrollToField(creditExpiryRef)}
+                onSubmitEditing={() => firstAmountRef.current?.focus()}
               />
             </ThemedView>
           ) : null}
@@ -233,6 +297,9 @@ export default function AddWalletScreen() {
               onSearchChange={setSharedSearch}
               onRemoveMember={removeSharedMember}
               onAddMember={addSharedMember}
+              searchInputRef={sharedSearchRef}
+              onSearchFocus={() => scrollToField(sharedSearchRef)}
+              onSearchSubmit={() => firstAmountRef.current?.focus()}
             />
           ) : null}
 
@@ -242,6 +309,9 @@ export default function AddWalletScreen() {
             onAddBalance={addBalanceRow}
             onCycleCurrency={cycleBalanceCurrency}
             onAmountChange={updateBalanceAmount}
+            firstAmountInputRef={firstAmountRef}
+            onFirstAmountFocus={() => scrollToField(firstAmountRef)}
+            onFirstAmountSubmit={() => Keyboard.dismiss()}
           />
 
           <ThemedView style={styles.section}>
@@ -259,15 +329,9 @@ export default function AddWalletScreen() {
             disabled={!canCreate}
             style={{ marginTop: 10 }}
           />
-
-          <Pressable
-            onPress={() => router.back()}
-            style={({ pressed }) => [styles.cancel, pressed ? styles.pressed : null]}
-          >
             <ThemedText type="defaultSemiBold" style={styles.cancelText}>
-              {t("cancel")}
+              {("     ")}
             </ThemedText>
-          </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
     </ThemedView>
